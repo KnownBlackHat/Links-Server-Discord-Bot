@@ -16,4 +16,4 @@ jobs:
       run: pip install -r requirements.txt
 
     - name: Run Bot
-      run: TOKEN={{ secrets.token  }} python bot.py
+      run: TOKEN=${{ secrets.token  }} python bot.py
