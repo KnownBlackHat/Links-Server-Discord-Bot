@@ -15,7 +15,7 @@ jobs:
     - name: Install Dependency
       run: |
         pip install -r requirements.txt
-        apt install ffmpeg -y
+        sudo apt install ffmpeg -y
 
     - name: Run Bot
       run: TOKEN=${{ secrets.token  }} python bot.py
