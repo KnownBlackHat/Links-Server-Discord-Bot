@@ -31,7 +31,7 @@ async def httpx_download(url: str, file_name: Path, client: httpx.AsyncClient):
                 async for chunk in response.aiter_bytes():
                     await file.write(chunk)
         download.add(url)
-    except httpx.NetworkError:
+    except Exception:
         logger.exception(f"Error while downloading {url}")
 
 
@@ -70,7 +70,6 @@ def is_guild_or_bot_owner():
 
 @commands.max_concurrency(1, per=commands.BucketType.channel, wait=True)
 @bot.slash_command(name="serve", dm_permission=False)
-@is_guild_or_bot_owner()
 async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
     await inter.response.defer(ephemeral=True)
     await inter.send("Serving...")
@@ -84,7 +83,7 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
     url_set = {x for x in url_list}
     logger.info(f"Downloading {len(url_list)} Items")
 
-    async with httpx.AsyncClient(limits=httpx.Limits(max_connections=10)) as client:
+    async with httpx.AsyncClient(limits=httpx.Limits(max_connections=5)) as client:
         tasks = (
             httpx_download(
                 url=url,
@@ -93,7 +92,7 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
                 ),
                 client=client,
             )
-            for url in url_list
+            for url in url_set
         )
         timer_start = time.perf_counter()
         await asyncio.gather(*tasks)
@@ -112,7 +111,6 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
     )
 
 
-@commands.is_owner()
 @bot.slash_command(name="shutdown")
 async def shutdown(inter: disnake.CommandInteraction):
     await inter.send("Shutting Down!", ephemeral=True)
