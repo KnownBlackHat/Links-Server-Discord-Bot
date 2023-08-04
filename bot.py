@@ -70,6 +70,7 @@ def is_guild_or_bot_owner():
 
 @commands.max_concurrency(1, per=commands.BucketType.channel, wait=True)
 @bot.slash_command(name="serve", dm_permission=False)
+@is_guild_or_bot_owner()
 async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
     await inter.response.defer(ephemeral=True)
     await inter.send("Serving...")
@@ -111,6 +112,7 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
     )
 
 
+@commands.is_owner()
 @bot.slash_command(name="shutdown")
 async def shutdown(inter: disnake.CommandInteraction):
     await inter.send("Shutting Down!", ephemeral=True)
