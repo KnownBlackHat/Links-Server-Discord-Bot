@@ -3,12 +3,13 @@ import logging
 import os
 import time
 from pathlib import Path
+from typing import Set
 from uuid import uuid4
 
 import aiofiles
 import disnake
 import httpx
-from disnake.ext import commands
+from disnake.ext import commands, tasks
 
 from video_segmenter import segment
 
@@ -19,20 +20,55 @@ logging.basicConfig(
     level=logging.INFO,
     handlers=[logging.StreamHandler()],
 )
-download = set()
+
+queue = asyncio.Queue()
 
 
-async def httpx_download(url: str, file_name: Path, client: httpx.AsyncClient):
-    try:
-        async with client.stream("GET", url) as response:
-            if response.status_code != 200:
-                return
-            async with aiofiles.open(file_name, mode="wb") as file:
-                async for chunk in response.aiter_bytes():
-                    await file.write(chunk)
-        download.add(url)
-    except Exception:
-        logger.exception(f"Error while downloading {url}")
+class Adownloader:
+    def __init__(
+        self, urls: Set, logger: logging.Logger = logging.getLogger(__name__)
+    ) -> None:
+        self._downloaded = set()
+        self.urls = urls
+        self.logger = logger
+
+    async def _httpx_download(
+        self, url: str, dir: Path, client: httpx.AsyncClient
+    ) -> None:
+        try:
+            async with client.stream("GET", url) as response:
+                response.raise_for_status()
+                async with aiofiles.open(
+                    dir.joinpath(str(uuid4()) + "." + url.split(".")[-1]), mode="wb"
+                ) as file:
+                    async for chunk in response.aiter_bytes():
+                        await file.write(chunk)
+            self._downloaded.add(url)
+        except httpx.HTTPStatusError as e:
+            logger.critical(f"Server returned {e.response.status_code} for {url}")
+        except Exception:
+            logger.exception(f"Error while downloading {url}")
+
+    async def download(self) -> Path:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(None), limits=httpx.Limits(max_connections=5)
+        ) as client:
+            dir = Path(str(uuid4()))
+            dir.mkdir()
+            tasks = (
+                self._httpx_download(url=url, dir=dir, client=client)
+                for url in self.urls
+            )
+            timer_start = time.perf_counter()
+            logger.info(f"Downloading {len(self.urls)} Items")
+            await asyncio.gather(*tasks)
+            self.logger.info(
+                f"{len(self.urls)} items downloaded within {time.perf_counter() - timer_start:.2f}"
+            )
+            not_downloaded = self.urls - self._downloaded
+            if len(not_downloaded):
+                logger.info(f"Failed To Download {not_downloaded}")
+        return dir
 
 
 async def upload(inter: disnake.GuildCommandInteraction, dir: Path):
@@ -47,7 +83,6 @@ async def upload(inter: disnake.GuildCommandInteraction, dir: Path):
                 continue
             file.unlink()
             await upload(inter, seg_dir)
-            seg_dir.rmdir()
     dir_iter = dir_iter - to_segment
     total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
     file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
@@ -55,6 +90,7 @@ async def upload(inter: disnake.GuildCommandInteraction, dir: Path):
         await inter.channel.send(files=file_grp)
     for file in dir_iter:
         file.unlink()
+    dir.rmdir()
 
 
 def is_guild_or_bot_owner():
@@ -68,48 +104,46 @@ def is_guild_or_bot_owner():
     return commands.check(predicate)
 
 
-@commands.max_concurrency(1, per=commands.BucketType.channel, wait=True)
-@bot.slash_command(name="serve", dm_permission=False)
 @is_guild_or_bot_owner()
+@bot.slash_command(name="serve", dm_permission=False)
 async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
-    await inter.response.defer(ephemeral=True)
-    await inter.send("Serving...")
-    destination = Path(str(inter.channel.id))
-    try:
-        destination.mkdir()
-    except FileExistsError:
-        ...
+    if attachment.content_type != "text/plain; charset=utf-8":
+        await inter.send(
+            "Kindly Provide .txt file having charset=utf-8", ephemeral=True
+        )
+    await inter.send("Provided Links will be uploaded soon")
     url_buff = await attachment.read()
+    await inter.send(attachment.content_type)
     url_list = url_buff.decode("utf-8").split("\n")
     url_set = {x for x in url_list}
-    logger.info(f"Downloading {len(url_list)} Items")
 
-    async with httpx.AsyncClient(limits=httpx.Limits(max_connections=5)) as client:
-        tasks = (
-            httpx_download(
-                url=url,
-                file_name=destination.joinpath(
-                    Path(uuid4().__str__() + "." + url.split(".")[-1])
-                ),
-                client=client,
+    async def _dwnld():
+        downloader = Adownloader(urls=url_set)
+        destination = await downloader.download()
+
+        async def _upload():
+            logger.info(f"Uploading from {destination}")
+            await upload(inter, destination)
+            logger.info("Upload Complete")
+
+            await inter.channel.send(
+                f"{inter.author.mention} Upload Completed",
+                allowed_mentions=disnake.AllowedMentions(),
+                delete_after=5,
             )
-            for url in url_set
-        )
-        timer_start = time.perf_counter()
-        await asyncio.gather(*tasks)
-        logger.info(
-            f"{len(url_set)} downloaded within {time.perf_counter() - timer_start}"
-        )
 
-    logger.info(f"Not Downloaded {url_set - download}")
-    logger.info(f"Uploading from {destination}")
-    await upload(inter, destination)
-    logger.info("Upload Complete")
-    await inter.channel.send(
-        f"{inter.author.mention} Upload Completed",
-        allowed_mentions=disnake.AllowedMentions(),
-        delete_after=5,
-    )
+        asyncio.create_task(_upload())
+
+    await queue.put(_dwnld)
+
+
+@tasks.loop()
+async def run():
+    if queue.empty():
+        return
+    _f = await queue.get()
+    await _f()
+    queue.task_done()
 
 
 @commands.is_owner()
@@ -119,4 +153,6 @@ async def shutdown(inter: disnake.CommandInteraction):
     exit()
 
 
-bot.run(os.getenv("TOKEN"))
+if __name__ == "__main__":
+    run.start()
+    bot.run(os.getenv("TOKEN"))
