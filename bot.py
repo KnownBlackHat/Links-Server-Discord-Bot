@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import time
+from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Set
 from uuid import uuid4
@@ -11,6 +12,7 @@ import disnake
 import httpx
 from disnake.ext import commands, tasks
 
+from NsfwLiveCam import NsfwLiveCam
 from video_segmenter import segment
 
 bot = commands.InteractionBot(intents=disnake.Intents.all())
@@ -71,7 +73,20 @@ class Adownloader:
         return dir
 
 
-async def upload(inter: disnake.GuildCommandInteraction, dir: Path):
+async def upload(inter: disnake.Interaction, dir: Path):
+    if dir.is_file():
+        try:
+            dir = segment(dir, 24, Path("."))
+            await upload(inter, dir)
+        except ValueError:
+            await inter.send(file=disnake.File(dir))
+        finally:
+            await inter.send(
+                f"{inter.author.mention} upload completes",
+                delete_after=5,
+                allowed_mentions=disnake.AllowedMentions(),
+            )
+            return
     dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
     to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
     if to_segment:
@@ -151,6 +166,36 @@ async def run():
 async def shutdown(inter: disnake.CommandInteraction):
     await inter.send("Shutting Down!", ephemeral=True)
     exit()
+
+
+class RecorderView(disnake.ui.View):
+    def __init__(self, process: Process, recorder: NsfwLiveCam) -> None:
+        super().__init__(timeout=None)
+        self.recorder = recorder
+        self.process = process
+
+    @disnake.ui.button(label="Update Thumbnail", style=disnake.ButtonStyle.green)
+    async def green(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        await inter.response.defer()
+        await inter.edit_original_response(await self.recorder.get_thumbnail())
+
+    @disnake.ui.button(label="Stop Recording", style=disnake.ButtonStyle.red)
+    async def red(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.process.terminate()
+        await asyncio.sleep(1)
+        await inter.send("Recording Stopped", ephemeral=True)
+        await upload(inter, self.recorder.out_path)
+
+
+@bot.slash_command(name="record")
+async def record(inter: disnake.GuildCommandInteraction, model: str):
+    recorder = NsfwLiveCam(
+        model_name=model, out_dir=Path("."), client=httpx.AsyncClient()
+    )
+    process = await recorder.record_stream()
+    await inter.send(
+        await recorder.get_thumbnail(), view=RecorderView(process, recorder)
+    )
 
 
 if __name__ == "__main__":
