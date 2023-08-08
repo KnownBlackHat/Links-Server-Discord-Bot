@@ -163,11 +163,7 @@ def is_guild_or_bot_owner():
 @is_guild_or_bot_owner()
 @bot.slash_command(name="serve", dm_permission=False)
 async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
-    if attachment.content_type != "text/plain; charset=utf-8":
-        await inter.send(
-            "Kindly Provide .txt file having charset=utf-8", ephemeral=True
-        )
-    await inter.send("Provided Links will be uploaded soon")
+    await inter.send("Provided Links will be uploaded soon", ephemeral=True)
     url_buff = await attachment.read()
     await inter.send(attachment.content_type)
     url_list = url_buff.decode("utf-8").split("\n")
