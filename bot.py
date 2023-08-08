@@ -126,7 +126,9 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
             )
             dir.unlink()
             return
-    dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
+    dir_iter = [x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()]
+    dir_iter.sort()
+    dir_iter = set(dir_iter)
     to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
     if to_segment:
         logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
@@ -241,6 +243,7 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
     await process.wait()
     try:
         await upload(inter, recorder.out_path)
+        await inter.delete_original_response()
     except FileNotFoundError:
         await inter.edit_original_response(
             "Model Is Currenlty Offline or in Private Show"
