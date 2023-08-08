@@ -228,6 +228,7 @@ class RecorderView(disnake.ui.View):
         await inter.delete_original_response()
 
 
+@is_guild_or_bot_owner()
 @bot.slash_command(name="record")
 async def record(inter: disnake.GuildCommandInteraction, model: str):
     recorder = NsfwLiveCam(
@@ -239,7 +240,7 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
     )
     await process.wait()
     try:
-        await upload_v2(inter, recorder.out_path)
+        await upload(inter, recorder.out_path)
     except FileNotFoundError:
         await inter.edit_original_response(
             "Model Is Currenlty Offline or in Private Show"
