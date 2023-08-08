@@ -46,7 +46,7 @@ class NsfwLiveCam:
         ffmpeg_proc = await asyncio.create_subprocess_exec(
             "ffmpeg",
             *ffmpeg.input(**input_options)
-            .output(self.out_path.name, **output_options)
+            .output(f"'{self.out_path.name}'", **output_options)
             .get_args(),
         )
         return ffmpeg_proc
