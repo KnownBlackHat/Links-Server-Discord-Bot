@@ -14,7 +14,6 @@ from disnake.ext import commands, tasks
 
 from NsfwLiveCam import NsfwLiveCam
 from video_segmenter import segment
-from video_segmenter_v2 import VidSegmenter
 
 bot = commands.InteractionBot(intents=disnake.Intents.all())
 logger = logging.getLogger(__name__)
@@ -74,61 +73,21 @@ class Adownloader:
         return dir
 
 
-async def upload_v2(inter: disnake.Interaction, dir: Path) -> None:
-    segmenter = VidSegmenter()
-    if dir.is_file():
-        try:
-            dir = await segmenter.segment(dir, 24, Path("."))
-            await upload(inter, dir)
-        except ValueError:
-            await inter.send(file=disnake.File(dir))
-        finally:
-            await inter.send(
-                f"{inter.author.mention} upload completes",
-                delete_after=5,
-                allowed_mentions=disnake.AllowedMentions(),
-            )
-            dir.unlink()
-            return
-    dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
-    to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
-    if to_segment:
-        logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
-        for file in to_segment:
-            try:
-                seg_dir = await segmenter.segment(media=file, max_size=24, save_dir=dir)
-            except:
-                continue
-            file.unlink()
-            await upload(inter, seg_dir)
-    dir_iter = dir_iter - to_segment
-    total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
-    file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
-    for file_grp in file_grps:
-        await inter.channel.send(files=file_grp)
-    for file in dir_iter:
-        file.unlink()
-    dir.rmdir()
-
-
 async def upload(inter: disnake.Interaction, dir: Path) -> None:
     if dir.is_file():
         try:
             dir = segment(dir, 24, Path("."))
             await upload(inter, dir)
         except ValueError:
-            await inter.send(file=disnake.File(dir))
+            await inter.channel.send(file=disnake.File(dir))
         finally:
             await inter.channel.send(
                 f"{inter.author.mention} upload completes",
                 delete_after=5,
                 allowed_mentions=disnake.AllowedMentions(),
             )
-            dir.unlink()
             return
-    dir_iter = [x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()]
-    dir_iter.sort()
-    dir_iter = set(dir_iter)
+    dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
     to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
     if to_segment:
         logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
@@ -139,7 +98,9 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
                 continue
             file.unlink()
             await upload(inter, seg_dir)
-    dir_iter = dir_iter - to_segment
+    dir_iter = list(dir_iter - to_segment)
+    dir_iter.sort()
+    logger.info(f"Uploading {dir_iter}")
     total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
     file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
     for file_grp in file_grps:
@@ -221,8 +182,10 @@ class RecorderView(disnake.ui.View):
             await inter.send("Recording wasn't started by you!", ephemeral=True)
             return
         await inter.response.defer()
-        self.process.terminate()
-        await inter.delete_original_response()
+        try:
+            self.process.terminate()
+        finally:
+            await inter.delete_original_response()
 
 
 @is_guild_or_bot_owner()
