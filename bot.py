@@ -165,7 +165,6 @@ def is_guild_or_bot_owner():
 async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
     await inter.send("Provided Links will be uploaded soon", ephemeral=True)
     url_buff = await attachment.read()
-    await inter.send(attachment.content_type)
     url_list = url_buff.decode("utf-8").split("\n")
     url_set = {x for x in url_list}
 
