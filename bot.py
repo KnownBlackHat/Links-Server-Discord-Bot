@@ -124,6 +124,13 @@ def is_guild_or_bot_owner():
 @is_guild_or_bot_owner()
 @bot.slash_command(name="serve", dm_permission=False)
 async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
+    """
+    Download and Upload the provided links and segment the video if it is more than server upload limit
+
+    Parameters
+    ----------
+    attachment : The text file containing the links to download
+    """
     await inter.send("Provided Links will be uploaded soon", ephemeral=True)
     url_buff = await attachment.read()
     url_list = url_buff.decode("utf-8").split("\n")
@@ -161,6 +168,9 @@ async def run():
 @commands.is_owner()
 @bot.slash_command(name="shutdown")
 async def shutdown(inter: disnake.CommandInteraction):
+    """
+    Shutdown the bot
+    """
     await inter.send("Shutting Down!", ephemeral=True)
     exit()
 
@@ -191,6 +201,13 @@ class RecorderView(disnake.ui.View):
 @is_guild_or_bot_owner()
 @bot.slash_command(name="record")
 async def record(inter: disnake.GuildCommandInteraction, model: str):
+    """
+    Record the stream of the provided model
+
+    Parameters
+    ----------
+    model : The model name to record
+    """
     recorder = NsfwLiveCam(
         model_name=model, out_dir=Path("."), client=httpx.AsyncClient()
     )
