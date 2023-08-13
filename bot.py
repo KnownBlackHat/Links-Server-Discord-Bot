@@ -6,12 +6,14 @@ from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Set
 from uuid import uuid4
+from zipfile import ZipFile
 
 import aiofiles
 import disnake
 import httpx
 from disnake.ext import commands, tasks
 
+from adropglaxy import DropGalaxy
 from NsfwLiveCam import NsfwLiveCam
 from video_segmenter import segment
 
@@ -73,6 +75,21 @@ class Adownloader:
         return dir
 
 
+def move_files_to_root(root_dir_path):
+    root_dir = Path(root_dir_path)
+
+    def move_files(directory):
+        for item in directory.iterdir():
+            if item.is_file():
+                new_location = root_dir / item.name
+                item.rename(new_location)
+            elif item.is_dir():
+                move_files(item)
+                item.rmdir()
+
+    move_files(root_dir)
+
+
 async def upload(inter: disnake.Interaction, dir: Path) -> None:
     if dir.is_file():
         try:
@@ -88,13 +105,23 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
             )
             return
     dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
+    zip_files = {i for i in dir_iter if str(i).endswith(".zip")}
+    if zip_files:
+        zip_path = Path(str(uuid4()))
+        for file in zip_files:
+            z = ZipFile(file)
+            z.extractall(zip_path)
+            file.unlink()
+            move_files_to_root(zip_path)
+            await upload(inter, zip_path)
+    dir_iter = dir_iter - zip_files
     to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
     if to_segment:
         logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
         for file in to_segment:
             try:
                 seg_dir = segment(media=file, max_size=24, save_dir=dir)
-            except:
+            except Exception:
                 continue
             file.unlink()
             await upload(inter, seg_dir)
@@ -135,6 +162,15 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
     url_buff = await attachment.read()
     url_list = url_buff.decode("utf-8").split("\n")
     url_set = {x for x in url_list}
+    dropgalaxy_set = {x for x in url_set if x.startswith("https://dropgalaxy")}
+    url_set = url_set - dropgalaxy_set
+
+    async with httpx.AsyncClient() as client:
+        dropgalaxy_resolver = DropGalaxy(client)
+        links = await dropgalaxy_resolver(list(dropgalaxy_set))
+
+    for link in links:
+        url_set.add(link)
 
     async def _dwnld():
         downloader = Adownloader(urls=url_set)
