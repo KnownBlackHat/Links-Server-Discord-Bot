@@ -117,7 +117,7 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
                 await upload(inter, zip_path)
             except BadZipfile:
                 file.unlink()
-                return
+
     dir_iter = dir_iter - zip_files
     to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
     if to_segment:
