@@ -169,7 +169,9 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
     url_set = url_set - dropgalaxy_set
 
     if dropgalaxy_set:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(
+            limits=httpx.Limits(max_connections=10), timeout=httpx.Timeout(None)
+        ) as client:
             dropgalaxy_resolver = DropGalaxy(client)
             links = await dropgalaxy_resolver(dropgalaxy_set)
             links = {link for link in links if link}
