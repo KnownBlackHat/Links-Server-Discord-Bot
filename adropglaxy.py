@@ -1,10 +1,13 @@
 import asyncio
+import logging
 import re
 import sys
-from typing import List
+from typing import Set
 
 import httpx
-from bs4 import BeautifulSoup
+from selectolax.parser import HTMLParser
+
+logger = logging.getLogger(__name__)
 
 
 class DropGalaxy:
@@ -33,30 +36,30 @@ class DropGalaxy:
         )
         return resp.text
 
-    async def _get_link(self, id: str) -> str:
+    async def _get_link(self, id: str) -> str | None:
         headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
         }
         data = {"op": "download2", "id": id, "xd": await self._get_token(id)}
 
         resp = await self.client.post(self.base_url + id, headers=headers, data=data)
-        soup = BeautifulSoup(resp.content, "html.parser")
-        form_element = soup.find("form", id="dllink")
-        if form_element:
-            zip_url = form_element.get("action")  # type: ignore
-            return zip_url  # type: ignore
-
+        html = HTMLParser(resp.content)
+        try:
+            zip_url = html.css_first("#dllink").attributes.get("action")
+        except AttributeError:
+            logger.critical(f"Unable to get zip url {data=!r}")
+            return None
         else:
-            raise ValueError()
+            return zip_url
 
     def _link_id(self, url: str) -> str:
         return url.split("/")[-1]
 
-    async def __call__(self, url_array: List[str]) -> List[str]:
-        ids = (self._link_id(url) for url in url_array)
-        tasks = (self._get_link(id) for id in ids)
+    async def __call__(self, url_array: Set[str]) -> Set[str]:
+        ids = {self._link_id(url) for url in url_array}
+        tasks = {self._get_link(id) for id in ids}
         urls = await asyncio.gather(*tasks)
-        return urls
+        return set(urls)
 
 
 async def main() -> None:
@@ -67,7 +70,7 @@ async def main() -> None:
         exit()
     async with httpx.AsyncClient() as client:
         resolver = DropGalaxy(client)
-        links = await resolver(urls)
+        links = await resolver(set(urls))
         for link in links:
             print(link)
 

@@ -129,9 +129,8 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
                 continue
             file.unlink()
             await upload(inter, seg_dir)
-    dir_iter = list(dir_iter - to_segment)
-    dir_iter.sort()
-    logger.info(f"Uploading {dir_iter}")
+    dir_iter = sorted(dir_iter - to_segment)
+    logger.debug(f"Uploading {dir_iter!r}")
     total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
     file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
     for file_grp in file_grps:
@@ -169,12 +168,12 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
     dropgalaxy_set = {x for x in url_set if x.startswith("https://dropgalaxy")}
     url_set = url_set - dropgalaxy_set
 
-    async with httpx.AsyncClient() as client:
-        dropgalaxy_resolver = DropGalaxy(client)
-        links = await dropgalaxy_resolver(list(dropgalaxy_set))
-
-    for link in links:
-        url_set.add(link)
+    if dropgalaxy_set:
+        async with httpx.AsyncClient() as client:
+            dropgalaxy_resolver = DropGalaxy(client)
+            links = await dropgalaxy_resolver(dropgalaxy_set)
+            links = {link for link in links if link}
+            url_set.update(links)
 
     async def _dwnld():
         downloader = Adownloader(urls=url_set)
