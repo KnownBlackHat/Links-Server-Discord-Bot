@@ -6,7 +6,7 @@ from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Set
 from uuid import uuid4
-from zipfile import ZipFile
+from zipfile import BadZipfile, ZipFile
 
 import aiofiles
 import disnake
@@ -109,11 +109,15 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
     if zip_files:
         zip_path = Path(str(uuid4()))
         for file in zip_files:
-            z = ZipFile(file)
-            z.extractall(zip_path)
-            file.unlink()
-            move_files_to_root(zip_path)
-            await upload(inter, zip_path)
+            try:
+                z = ZipFile(file)
+                z.extractall(zip_path)
+                file.unlink()
+                move_files_to_root(zip_path)
+                await upload(inter, zip_path)
+            except BadZipfile:
+                file.unlink()
+                return
     dir_iter = dir_iter - zip_files
     to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
     if to_segment:

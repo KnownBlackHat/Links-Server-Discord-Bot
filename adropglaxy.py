@@ -1,7 +1,7 @@
 import asyncio
 import re
 import sys
-from typing import AsyncGenerator, List
+from typing import List
 
 import httpx
 from bs4 import BeautifulSoup
@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 class DropGalaxy:
     def __init__(self, client: httpx.AsyncClient) -> None:
-        self.base_url = "https://dropgalaxy.co/"
+        self.base_url = "https://dropgalaxy.co/drive/"
         self.client = client
 
     async def _get_token(self, id: str) -> str:
