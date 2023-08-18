@@ -47,7 +47,7 @@ class DropGalaxy:
         try:
             zip_url = html.css_first("#dllink").attributes.get("action")
         except AttributeError:
-            logger.critical(f"Unable to get zip url {data=!r}")
+            logger.critical(f"{resp.status_code} Unable to get zip url {data=!r}")
             return None
         else:
             return zip_url
@@ -68,7 +68,9 @@ async def main() -> None:
     except IndexError:
         print(f"{sys.argv[0]} [link]")
         exit()
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(
+        limits=httpx.Limits(max_connections=15), timeout=httpx.Timeout(None)
+    ) as client:
         resolver = DropGalaxy(client)
         links = await resolver(set(urls))
         for link in links:
