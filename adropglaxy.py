@@ -69,7 +69,7 @@ async def main() -> None:
         print(f"{sys.argv[0]} [link]")
         exit()
     async with httpx.AsyncClient(
-        limits=httpx.Limits(max_connections=15), timeout=httpx.Timeout(None)
+        limits=httpx.Limits(max_connections=5), timeout=httpx.Timeout(None)
     ) as client:
         resolver = DropGalaxy(client)
         links = await resolver(set(urls))
