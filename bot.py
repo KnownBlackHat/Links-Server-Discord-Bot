@@ -93,7 +93,7 @@ def move_files_to_root(root_dir_path):
 async def upload(inter: disnake.Interaction, dir: Path) -> None:
     if dir.is_file():
         try:
-            dir = segment(dir, 24, Path("."))
+            dir = await asyncio.to_thread(segment, dir, 24, Path("."))
             await upload(inter, dir)
         except ValueError:
             await inter.channel.send(file=disnake.File(dir))
@@ -124,7 +124,9 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
         logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
         for file in to_segment:
             try:
-                seg_dir = segment(media=file, max_size=24, save_dir=dir)
+                seg_dir = await asyncio.to_thread(
+                    segment, media=file, max_size=24, save_dir=dir
+                )
             except Exception:
                 continue
             file.unlink()
@@ -183,7 +185,11 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
 
         async def _upload():
             logger.info(f"Uploading from {destination}")
-            await upload(inter, destination)
+            try:
+                await upload(inter, destination)
+            except Exception as e:
+                await inter.send(file=disnake.File(str(e)))
+                return
             logger.info("Upload Complete")
 
             await inter.channel.send(
