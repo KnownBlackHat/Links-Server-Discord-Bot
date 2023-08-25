@@ -94,8 +94,8 @@ def move_files_to_root(root_dir_path):
 async def upload(inter: disnake.Interaction, dir: Path) -> None:
     if dir.is_file():
         try:
-            dir = await asyncio.to_thread(segment, dir, 24, Path("."))
-            await upload(inter, dir)
+            ndir = await asyncio.to_thread(segment, dir, 24, Path("."))
+            await upload(inter, ndir)
         except ValueError:
             await inter.channel.send(file=disnake.File(dir))
         finally:
@@ -104,6 +104,7 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
                 delete_after=5,
                 allowed_mentions=disnake.AllowedMentions(),
             )
+            dir.unlink()
             return
     dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
     zip_files = {i for i in dir_iter if str(i).endswith(".zip")}
@@ -288,7 +289,6 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
     await process.wait()
     try:
         await upload(inter, recorder.out_path)
-        await inter.delete_original_response()
     except FileNotFoundError:
         await inter.edit_original_response(
             "Model Is Currenlty Offline or in Private Show"

@@ -84,8 +84,10 @@ def segment(media: Path, max_size: int, save_dir: Path) -> Path:
         ...
     stats = media_stats(media, max_size)
     if stats.size <= max_size:
+        out_path.rmdir()
         raise ValueError(f"Video Size is Already less than {max_size} Mb")
     elif stats.segment_duration <= 0:
+        out_path.rmdir()
         raise ValueError("Max Size Is Too Low")
     logger.debug(f"[+] Trimming {media.name}")
     logger.debug(f"[+] Max Size: {max_size} Mb")
