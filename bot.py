@@ -1,4 +1,5 @@
 import asyncio
+import io
 import logging
 import os
 import time
@@ -188,7 +189,7 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
             try:
                 await upload(inter, destination)
             except Exception as e:
-                await inter.send(file=disnake.File(str(e).encode("utf-8")))
+                await inter.send(file=disnake.File(io.BytesIO(str(e).encode("utf-8"))))
                 return
             logger.info("Upload Complete")
 
@@ -224,12 +225,14 @@ async def status(inter: disnake.CommandInteraction) -> None:
         "df -h", stdout=asyncio.subprocess.PIPE
     )
     text = f"""
-    Files Size
-    {await files_size.stdout.read()}
-    System Space
-    {await system_space.stdout.read()}
+Files Size\n
+{(await files_size.stdout.read()).decode('utf-8')}
+System Space\n
+{(await system_space.stdout.read()).decode('utf-8')}
     """
-    await inter.send(file=disnake.File(text.encode("utf-8"), filename="status.txt"))
+    await inter.send(
+        file=disnake.File(io.BytesIO(text.encode("utf-8")), filename="status.txt")
+    )
 
 
 @commands.is_owner()
