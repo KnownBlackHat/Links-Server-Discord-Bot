@@ -188,7 +188,7 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
             try:
                 await upload(inter, destination)
             except Exception as e:
-                await inter.send(file=disnake.File(str(e)))
+                await inter.send(file=disnake.File(str(e).encode("utf-8")))
                 return
             logger.info("Upload Complete")
 
@@ -212,9 +212,29 @@ async def run():
     queue.task_done()
 
 
+@bot.slash_command(name="status")
+async def status(inter: disnake.CommandInteraction) -> None:
+    """
+    Shows system status
+    """
+    files_size = await asyncio.subprocess.create_subprocess_shell(
+        "ls -sh .", stdout=asyncio.subprocess.PIPE
+    )
+    system_space = await asyncio.subprocess.create_subprocess_shell(
+        "df -h", stdout=asyncio.subprocess.PIPE
+    )
+    text = f"""
+    Files Size
+    {await files_size.stdout.read()}
+    System Space
+    {await system_space.stdout.read()}
+    """
+    await inter.send(file=disnake.File(text.encode("utf-8"), filename="status.txt"))
+
+
 @commands.is_owner()
 @bot.slash_command(name="shutdown")
-async def shutdown(inter: disnake.CommandInteraction):
+async def shutdown(inter: disnake.CommandInteraction) -> None:
     """
     Shutdown the bot
     """
