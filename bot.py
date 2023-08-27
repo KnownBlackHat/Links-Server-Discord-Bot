@@ -214,6 +214,7 @@ async def run():
     queue.task_done()
 
 
+@is_guild_or_bot_owner()
 @bot.slash_command(name="status")
 async def status(inter: disnake.CommandInteraction) -> None:
     """
