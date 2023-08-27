@@ -293,6 +293,8 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
         await inter.edit_original_response(
             "Model Is Currenlty Offline or in Private Show"
         )
+    else:
+        await inter.delete_original_response()
 
 
 if __name__ == "__main__":
