@@ -155,8 +155,8 @@ def is_guild_or_bot_owner():
     return commands.check(predicate)
 
 
-@is_guild_or_bot_owner()
 @bot.slash_command(name="serve", dm_permission=False)
+@is_guild_or_bot_owner()
 async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
     """
     Download and Upload the provided links and segment the video if it is more than server upload limit
@@ -214,8 +214,8 @@ async def run():
     queue.task_done()
 
 
-@is_guild_or_bot_owner()
 @bot.slash_command(name="status")
+@is_guild_or_bot_owner()
 async def status(inter: disnake.CommandInteraction) -> None:
     """
     Shows system status
@@ -269,8 +269,8 @@ class RecorderView(disnake.ui.View):
             await inter.send("Stopping Recording", ephemeral=True, delete_after=2)
 
 
-@is_guild_or_bot_owner()
 @bot.slash_command(name="record")
+@is_guild_or_bot_owner()
 async def record(inter: disnake.GuildCommandInteraction, model: str):
     """
     Record the stream of the provided model
@@ -294,7 +294,7 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
         await inter.edit_original_response(
             "Model Is Currenlty Offline or in Private Show"
         )
-    else:
+    finally:
         await msg.delete()
 
 
