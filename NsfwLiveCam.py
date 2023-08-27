@@ -48,5 +48,6 @@ class NsfwLiveCam:
             *ffmpeg.input(**input_options)
             .output(self.out_path.name, **output_options)
             .get_args(),
+            stdout=asyncio.subprocess.DEVNULL,
         )
         return ffmpeg_proc
