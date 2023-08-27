@@ -5,7 +5,7 @@ import os
 import time
 from asyncio.subprocess import Process
 from pathlib import Path
-from typing import Set
+from typing import Set, Union
 from uuid import uuid4
 from zipfile import BadZipfile, ZipFile
 
@@ -18,7 +18,7 @@ from adropglaxy import DropGalaxy
 from NsfwLiveCam import NsfwLiveCam
 from video_segmenter import segment
 
-bot = commands.InteractionBot(intents=disnake.Intents.all())
+bot = commands.Bot(command_prefix="!", intents=disnake.Intents.all())
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(levelname)s: %(message)s",
@@ -91,7 +91,9 @@ def move_files_to_root(root_dir_path):
     move_files(root_dir)
 
 
-async def upload(inter: disnake.Interaction, dir: Path) -> None:
+async def upload(
+    inter: Union[disnake.Interaction, commands.Context], dir: Path
+) -> None:
     if dir.is_file():
         try:
             ndir = await asyncio.to_thread(segment, dir, 24, Path("."))
@@ -248,10 +250,11 @@ async def shutdown(inter: disnake.CommandInteraction) -> None:
 
 
 class RecorderView(disnake.ui.View):
-    def __init__(self, process: Process, recorder: NsfwLiveCam) -> None:
+    def __init__(self, process: Process, recorder: NsfwLiveCam, author_id: int) -> None:
         super().__init__(timeout=None)
         self.recorder = recorder
         self.process = process
+        self.author_id = author_id
 
     @disnake.ui.button(label="Update Thumbnail", style=disnake.ButtonStyle.green)
     async def green(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
@@ -260,7 +263,7 @@ class RecorderView(disnake.ui.View):
 
     @disnake.ui.button(label="Stop Recording", style=disnake.ButtonStyle.red)
     async def red(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        if inter.author.id != inter.message.interaction.author.id:  # type: ignore
+        if inter.author.id != self.author_id:
             await inter.send("Recording wasn't started by you!", ephemeral=True)
             return
         try:
@@ -269,9 +272,9 @@ class RecorderView(disnake.ui.View):
             await inter.send("Stopping Recording", ephemeral=True, delete_after=2)
 
 
-@bot.slash_command(name="record")
-@is_guild_or_bot_owner()
-async def record(inter: disnake.GuildCommandInteraction, model: str):
+async def record(
+    inter: Union[disnake.GuildCommandInteraction, commands.GuildContext], model: str
+):
     """
     Record the stream of the provided model
 
@@ -283,19 +286,44 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
         model_name=model, out_dir=Path("."), client=httpx.AsyncClient()
     )
     process = await recorder.record_stream()
-    await inter.send(
-        await recorder.get_thumbnail(), view=RecorderView(process, recorder)
-    )
-    msg = await inter.original_response()
+    if isinstance(inter, disnake.GuildCommandInteraction):
+        await inter.send(
+            await recorder.get_thumbnail(),
+            view=RecorderView(process, recorder, inter.author.id),
+        )
+        msg = await inter.original_response()
+    else:
+        msg = await inter.send(
+            await recorder.get_thumbnail(),
+            view=RecorderView(process, recorder, inter.author.id),
+        )
     await process.wait()
+
     try:
         await upload(inter, recorder.out_path)
     except FileNotFoundError:
-        await inter.edit_original_response(
-            "Model Is Currenlty Offline or in Private Show"
-        )
+        if isinstance(inter, disnake.GuildCommandInteraction):
+            await inter.edit_original_response(
+                "Model Is Currenlty Offline or in Private Show"
+            )
+        else:
+            await msg.edit("Model Is Currenlty Offline or in Private Show")
     finally:
         await msg.delete()
+
+
+@bot.slash_command(name="record")
+@is_guild_or_bot_owner()
+async def slash_record(inter: disnake.GuildCommandInteraction, model: str):
+    await record(inter, model)
+
+
+@bot.command(name="record")
+@is_guild_or_bot_owner()
+async def pre_record(ctx: commands.GuildContext, model: str):
+    if model[0] == "'" and model[-1] == "'":
+        model = model[1:-1]
+    await record(ctx, model)
 
 
 if __name__ == "__main__":
