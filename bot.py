@@ -146,11 +146,14 @@ async def upload(inter: disnake.Interaction, dir: Path) -> None:
 
 def is_guild_or_bot_owner():
     def predicate(inter):
-        return (
+        a = (
             inter.guild is not None
             and inter.guild.owner_id == inter.author.id
             or inter.guild.owner_id == bot.owner_id
         )
+        print(a)
+        print(f"{inter.guild.owner_id=} {inter.author.id=} {bot.owner_id=}")
+        return a
 
     return commands.check(predicate)
 
