@@ -275,13 +275,6 @@ class RecorderView(disnake.ui.View):
 async def record(
     inter: Union[disnake.GuildCommandInteraction, commands.GuildContext], model: str
 ):
-    """
-    Record the stream of the provided model
-
-    Parameters
-    ----------
-    model : The model name to record
-    """
     recorder = NsfwLiveCam(
         model_name=model, out_dir=Path("."), client=httpx.AsyncClient()
     )
@@ -315,12 +308,26 @@ async def record(
 @bot.slash_command(name="record")
 @is_guild_or_bot_owner()
 async def slash_record(inter: disnake.GuildCommandInteraction, model: str):
+    """
+    Record the stream of the provided model
+
+    Parameters
+    ----------
+    model : The model name to record
+    """
     await record(inter, model)
 
 
 @bot.command(name="record")
 @is_guild_or_bot_owner()
 async def pre_record(ctx: commands.GuildContext, model: str):
+    """
+    Record the stream of the provided model
+
+    Parameters
+    ----------
+    model : The model name to record
+    """
     if model[0] == "'" and model[-1] == "'":
         model = model[1:-1]
     await record(ctx, model)
