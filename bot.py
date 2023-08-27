@@ -262,11 +262,10 @@ class RecorderView(disnake.ui.View):
         if inter.author.id != inter.message.interaction.author.id:  # type: ignore
             await inter.send("Recording wasn't started by you!", ephemeral=True)
             return
-        await inter.response.defer()
         try:
             self.process.terminate()
         finally:
-            await inter.delete_original_response()
+            await inter.send("Stopping Recording", ephemeral=True, delete_after=2)
 
 
 @is_guild_or_bot_owner()
@@ -286,6 +285,7 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
     await inter.send(
         await recorder.get_thumbnail(), view=RecorderView(process, recorder)
     )
+    msg = await inter.original_response()
     await process.wait()
     try:
         await upload(inter, recorder.out_path)
@@ -294,7 +294,7 @@ async def record(inter: disnake.GuildCommandInteraction, model: str):
             "Model Is Currenlty Offline or in Private Show"
         )
     else:
-        await inter.delete_original_response()
+        await msg.delete()
 
 
 if __name__ == "__main__":
