@@ -293,6 +293,7 @@ async def record(
             view=RecorderView(process, recorder, inter.author.id),
         )
     await process.wait()
+    await inter.channel.send(f"Stream Duration: {(time.perf_counter() - start)/60}")
 
     try:
         await upload(inter, recorder.out_path)
@@ -305,8 +306,8 @@ async def record(
             await msg.edit("Model Is Currenlty Offline or in Private Show")
     finally:
         await inter.channel.send(
-            f"{inter.author.mention} uploaded {(time.perf_counter() - start)/60}mins video",
-            delete_after=10,
+            f"{inter.author.mention} upload completed",
+            delete_after=5,
             allowed_mentions=disnake.AllowedMentions(),
         )
         await msg.delete()
