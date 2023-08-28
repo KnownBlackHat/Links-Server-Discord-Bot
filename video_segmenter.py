@@ -26,7 +26,7 @@ def get_video_duration_size(video_path: Path) -> Tuple[float, float]:
     return (duration, video_path.stat().st_size / (1024**2))
 
 
-def recheck(dir: Path, max_size: int):
+def recheck(dir: Path, max_size: float):
     files = [file for file in dir.iterdir() if file.is_file()]
     for file in files:
         file_size = file.stat().st_size / (1024**2)
@@ -41,7 +41,7 @@ def recheck(dir: Path, max_size: int):
             file.unlink()
 
 
-def media_stats(media: Path, max_size: int):
+def media_stats(media: Path, max_size: float):
     duration, size = get_video_duration_size(media)
     segment_duration = (duration / size) * max_size
 
@@ -76,7 +76,7 @@ def trim(
     subprocess.run(command, capture_output=True)
 
 
-def segment(media: Path, max_size: int, save_dir: Path) -> Path:
+def segment(media: Path, max_size: float, save_dir: Path) -> Path:
     out_path = Path(f"{save_dir}/{media.name[:-len(media.suffix)]}")
     try:
         out_path.mkdir()
