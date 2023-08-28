@@ -101,11 +101,6 @@ async def upload(
         except ValueError:
             await inter.channel.send(file=disnake.File(dir))
         finally:
-            await inter.channel.send(
-                f"{inter.author.mention} upload completes",
-                delete_after=5,
-                allowed_mentions=disnake.AllowedMentions(),
-            )
             dir.unlink()
             return
     dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
@@ -285,6 +280,7 @@ async def record(
         model_name=model, out_dir=Path("."), client=httpx.AsyncClient()
     )
     process = await recorder.record_stream()
+    start = time.perf_counter()
     if isinstance(inter, disnake.GuildCommandInteraction):
         await inter.send(
             await recorder.get_thumbnail(),
@@ -308,6 +304,11 @@ async def record(
         else:
             await msg.edit("Model Is Currenlty Offline or in Private Show")
     finally:
+        await inter.channel.send(
+            f"{inter.author.mention} uploaded {(time.perf_counter() - start)/60}mins video",
+            delete_after=5,
+            allowed_mentions=disnake.AllowedMentions(),
+        )
         await msg.delete()
 
 
