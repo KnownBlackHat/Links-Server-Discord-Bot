@@ -148,7 +148,7 @@ async def upload(
         dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
         zip_files = {i for i in dir_iter if str(i).endswith(".zip")}
         to_segment = {
-            file for file in dir_iter if file.stat().st_size / 1000**2 > max_file_size
+            file for file in dir_iter if file.stat().st_size / 1024**2 > max_file_size
         }
         dir_iter = sorted(dir_iter - to_segment)
         total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
@@ -159,10 +159,9 @@ async def upload(
         if to_segment:
             await upload_segment(inter, to_segment, dir, max_file_size)
 
-        logger.debug(f"Uploading {dir_iter!r}")
         for file_grp in file_grps:
             try:
-                logger.info({x.bytes_length / 1000**2 for x in file_grp})
+                logger.debug(f"{list(x.bytes_length / 1024**2 for x in file_grp)}")
                 await inter.channel.send(files=file_grp)
             except Exception:
                 logger.error("Upload Failed")
@@ -222,6 +221,7 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
                 )
             except Exception as e:
                 await inter.send(file=disnake.File(io.BytesIO(str(e).encode("utf-8"))))
+                logger.error(f"Upload Failed {e}")
                 return
             logger.info("Upload Complete")
 

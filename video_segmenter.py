@@ -30,15 +30,19 @@ def recheck(dir: Path, max_size: float):
     files = [file for file in dir.iterdir() if file.is_file()]
     for file in files:
         file_size = file.stat().st_size / (1024**2)
-        segment_duration = media_stats(file, round(file_size / 2)).segment_duration
-        if file_size >= max_size:
+        if file_size > max_size:
+            if (file_size - max_size) >= 1:
+                mx_size = file_size / 2
+            else:
+                mx_size = file_size - 1
+            segment_duration = media_stats(file, mx_size).segment_duration
             trim(
                 media=file,
                 segment_duration=segment_duration,
                 out_path=dir,
                 file_name=f"{file.name}%02d.mp4",
+                max_size=max_size,
             )
-            file.unlink()
 
 
 def media_stats(media: Path, max_size: float):
@@ -55,7 +59,11 @@ def media_stats(media: Path, max_size: float):
 
 
 def trim(
-    media: Path, segment_duration: float, out_path: Path, file_name: str = "%03d.mp4"
+    media: Path,
+    segment_duration: float,
+    out_path: Path,
+    max_size: float,
+    file_name: str = "%03d.mp4",
 ):
     command = [
         "ffmpeg",
@@ -74,6 +82,8 @@ def trim(
         f"{out_path.absolute()}/{file_name}",
     ]
     subprocess.run(command, capture_output=True)
+    media.unlink()
+    recheck(out_path, max_size)
 
 
 def segment(media: Path, max_size: float, save_dir: Path) -> Path:
@@ -95,8 +105,7 @@ def segment(media: Path, max_size: float, save_dir: Path) -> Path:
     logger.debug(f"[+] Size: {stats.size} Mb")
     logger.debug(f"[+] Segment Duration: {stats.segment_duration / 60} Minutes")
     logger.debug(f"[+] Saving To: {out_path.absolute()}")
-    trim(media, stats.segment_duration, out_path)
-    recheck(out_path, max_size)
+    trim(media, stats.segment_duration, out_path, max_size=max_size)
     return out_path
 
 
