@@ -140,7 +140,13 @@ async def upload(
     total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
     file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
     for file_grp in file_grps:
-        await inter.channel.send(files=file_grp)
+        while True:
+            try:
+                await inter.channel.send(files=file_grp)
+            except Exception:
+                logger.error("Upload Failed")
+            else:
+                break
     for file in dir_iter:
         file.unlink()
     dir.rmdir()
