@@ -5,7 +5,7 @@ import os
 import time
 from asyncio.subprocess import Process
 from pathlib import Path
-from typing import Set, Union
+from typing import Iterable, List, Set, Union
 from uuid import uuid4
 from zipfile import BadZipfile, ZipFile
 
@@ -91,60 +91,81 @@ def move_files_to_root(root_dir_path):
     move_files(root_dir)
 
 
+async def upload_file(
+    inter: Union[disnake.Interaction, commands.Context], dir: Path
+) -> None:
+    try:
+        ndir = await asyncio.to_thread(segment, dir, 24, Path("."))
+        await upload(inter, ndir)
+    except ValueError:
+        await inter.channel.send(file=disnake.File(dir))
+    finally:
+        dir.unlink()
+        return
+
+
+async def upload_zip(
+    inter: Union[disnake.Interaction, commands.Context], zip_files: Iterable[Path]
+) -> None:
+    zip_path = Path(str(uuid4()))
+    for file in zip_files:
+        try:
+            z = ZipFile(file)
+            z.extractall(zip_path)
+            file.unlink()
+            move_files_to_root(zip_path)
+            await upload(inter, zip_path)
+        except BadZipfile:
+            file.unlink()
+
+
+async def upload_segment(
+    inter: Union[disnake.Interaction, commands.Context],
+    to_segment: Union[List, Set],
+    dir: Path,
+) -> None:
+    logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
+    for file in to_segment:
+        try:
+            seg_dir = await asyncio.to_thread(
+                segment, media=file, max_size=24, save_dir=dir
+            )
+        except Exception:
+            continue
+        file.unlink()
+        await upload(inter, seg_dir)
+
+
 async def upload(
     inter: Union[disnake.Interaction, commands.Context], dir: Path
 ) -> None:
     if dir.is_file():
-        try:
-            ndir = await asyncio.to_thread(segment, dir, 24, Path("."))
-            await upload(inter, ndir)
-        except ValueError:
-            await inter.channel.send(file=disnake.File(dir))
-        finally:
-            dir.unlink()
-            return
-    dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
-    zip_files = {i for i in dir_iter if str(i).endswith(".zip")}
-    if zip_files:
-        zip_path = Path(str(uuid4()))
-        for file in zip_files:
-            try:
-                z = ZipFile(file)
-                z.extractall(zip_path)
-                file.unlink()
-                move_files_to_root(zip_path)
-                await upload(inter, zip_path)
-            except BadZipfile:
-                file.unlink()
+        await upload_file(inter, dir)
+    else:
+        dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
+        zip_files = {i for i in dir_iter if str(i).endswith(".zip")}
+        to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
+        dir_iter = sorted(dir_iter - to_segment)
+        total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
+        file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
 
-    dir_iter = dir_iter - zip_files
-    to_segment = {file for file in dir_iter if file.stat().st_size / 1024**2 > 24}
-    if to_segment:
-        logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
-        for file in to_segment:
-            try:
-                seg_dir = await asyncio.to_thread(
-                    segment, media=file, max_size=24, save_dir=dir
-                )
-            except Exception:
-                continue
+        if zip_files:
+            await upload_zip(inter, zip_files)
+        if to_segment:
+            await upload_segment(inter, to_segment, dir)
+
+        logger.debug(f"Uploading {dir_iter!r}")
+        for file_grp in file_grps:
+            while True:
+                try:
+                    await inter.channel.send(files=file_grp)
+                except Exception:
+                    logger.error("Upload Failed")
+                else:
+                    break
+        for file in dir_iter:
             file.unlink()
-            await upload(inter, seg_dir)
-    dir_iter = sorted(dir_iter - to_segment)
-    logger.debug(f"Uploading {dir_iter!r}")
-    total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
-    file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
-    for file_grp in file_grps:
-        while True:
-            try:
-                await inter.channel.send(files=file_grp)
-            except Exception:
-                logger.error("Upload Failed")
-            else:
-                break
-    for file in dir_iter:
-        file.unlink()
-    dir.rmdir()
+        dir.rmdir()
 
 
 def is_guild_or_bot_owner():
@@ -293,7 +314,9 @@ async def record(
             view=RecorderView(process, recorder, inter.author.id),
         )
     await process.wait()
-    await inter.channel.send(f"Stream Duration: {(time.perf_counter() - start)/60}")
+    await inter.channel.send(
+        f"Stream Duration: {(time.perf_counter() - start)/60:.2f}", delete_after=5
+    )
 
     try:
         await upload(inter, recorder.out_path)
