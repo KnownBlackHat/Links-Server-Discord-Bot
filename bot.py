@@ -306,7 +306,7 @@ async def record(
     finally:
         await inter.channel.send(
             f"{inter.author.mention} uploaded {(time.perf_counter() - start)/60}mins video",
-            delete_after=5,
+            delete_after=10,
             allowed_mentions=disnake.AllowedMentions(),
         )
         await msg.delete()
