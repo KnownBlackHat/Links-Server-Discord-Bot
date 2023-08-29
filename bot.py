@@ -20,11 +20,21 @@ from video_segmenter import segment
 
 bot = commands.Bot(command_prefix="!", intents=disnake.Intents.all())
 logger = logging.getLogger(__name__)
+file_handler = logging.FileHandler("bot.log", mode="w")
+console_handler = logging.StreamHandler()
+
+file_handler.setLevel(logging.DEBUG)
+console_handler.setLevel(logging.INFO)
 logging.basicConfig(
-    format="%(levelname)s: %(message)s",
-    level=logging.INFO,
-    handlers=[logging.StreamHandler()],
+    level=logging.NOTSET,
+    format="%(levelname)s - %(name)s - %(filename)s - %(module)s - %(funcName)s - %(message)s",
+    handlers=[console_handler, file_handler],
 )
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("video_segmenter").setLevel(logging.DEBUG)
+logging.getLogger("disnake").setLevel(logging.INFO)
 
 queue = asyncio.Queue()
 
@@ -98,6 +108,7 @@ async def upload_file(
 ) -> None:
     try:
         dir = await asyncio.to_thread(segment, file, max_file_size, Path("."))
+        logger.debug(f"Segmenter gave: {dir=} {max_file_size=}")
         await upload(inter, dir, max_file_size)
     except ValueError:
         await inter.channel.send(file=disnake.File(file))
@@ -225,7 +236,11 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
                     float((inter.guild.filesize_limit / 1024**2) - 1),
                 )
             except Exception as e:
-                await inter.send(file=disnake.File(io.BytesIO(str(e).encode("utf-8"))))
+                await inter.send(
+                    file=disnake.File(
+                        io.BytesIO(str(e).encode("utf-8")), filename="exception.txt"
+                    )
+                )
                 logger.error(f"Upload Failed {e}")
                 return
             logger.info("Upload Complete")
@@ -344,13 +359,15 @@ async def record(
         else:
             await msg.edit("Model Is Currenlty Offline or in Private Show")
     except Exception:
-        logger.error("Unable to upload")
-    finally:
+        logger.error("Unable to upload", exc_info=True)
+        await inter.channel.send(file=disnake.File(Path("bot.log")))
+    else:
         await inter.channel.send(
             f"{inter.author.mention} upload completed",
             delete_after=5,
             allowed_mentions=disnake.AllowedMentions(),
         )
+    finally:
         await msg.delete()
 
 
@@ -380,6 +397,15 @@ async def pre_record(ctx: commands.GuildContext, model: str):
     if model[0] == "'" and model[-1] == "'":
         model = model[1:-1]
     await record(ctx, model)
+
+
+@commands.is_owner()
+@bot.command(name="cmd")
+async def cmd(ctx: commands.GuildContext, *, args):
+    out = await asyncio.subprocess.create_subprocess_shell(
+        args, stdout=asyncio.subprocess.PIPE
+    )
+    await ctx.send(file=disnake.File(io.BytesIO(await out.stdout.read()), filename="cmd.txt"))  # type: ignore
 
 
 if __name__ == "__main__":

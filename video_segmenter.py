@@ -34,9 +34,9 @@ def recheck(dir: Path, max_size: float, retry: int = 0):
         file_size = file.stat().st_size / (1024**2)
         if file_size > max_size:
             should_check = True
-            logger.debug(f"{file_size=} {file_size - max_size}")
             mx_size = file_size - (file_size - max_size)
             mx_size -= retry
+            logger.debug(f"Trimming: {file=} {file_size=} {mx_size=} {retry=}")
             segment_duration = media_stats(file, mx_size).segment_duration
             trim(
                 media=file,
