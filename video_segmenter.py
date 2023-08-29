@@ -69,7 +69,7 @@ def trim(
     out_path: Path,
     file_name: str = "%03d.mp4",
 ):
-    logger.info(f"Trimming {media=} {out_path=} {segment_duration=}")
+    logger.debug(f"Trimming {media=} {out_path=} {segment_duration=}")
     command = [
         "ffmpeg",
         "-i",
@@ -86,7 +86,7 @@ def trim(
         "1",
         f"{out_path.absolute()}/{file_name}",
     ]
-    subprocess.run(command)
+    subprocess.run(command, capture_output=True)
 
 
 def segment(media: Path, max_size: float, save_dir: Path) -> Path:

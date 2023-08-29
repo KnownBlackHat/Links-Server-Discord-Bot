@@ -143,7 +143,7 @@ async def upload_segment(
 async def upload(
     inter: Union[disnake.Interaction, commands.Context], dir: Path, max_file_size: float
 ) -> None:
-    logger.info(f"Upload started {dir=} {max_file_size=}")
+    logger.debug(f"Upload started {dir=} {max_file_size=}")
     if dir.is_file():
         logger.debug(f"Uploading file {dir=} {max_file_size=}")
         await upload_file(inter, dir, max_file_size)
