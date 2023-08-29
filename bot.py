@@ -92,16 +92,17 @@ def move_files_to_root(root_dir_path):
 
 
 async def upload_file(
-    inter: Union[disnake.Interaction, commands.Context], dir: Path, max_file_size: float
+    inter: Union[disnake.Interaction, commands.Context],
+    file: Path,
+    max_file_size: float,
 ) -> None:
     try:
-        ndir = await asyncio.to_thread(segment, dir, max_file_size, Path("."))
-        await upload(inter, ndir, max_file_size)
+        dir = await asyncio.to_thread(segment, file, max_file_size, Path("."))
+        await upload(inter, dir, max_file_size)
     except ValueError:
-        await inter.channel.send(file=disnake.File(dir))
+        await inter.channel.send(file=disnake.File(file))
     finally:
-        dir.unlink()
-        return
+        file.unlink()
 
 
 async def upload_zip(
@@ -142,7 +143,9 @@ async def upload_segment(
 async def upload(
     inter: Union[disnake.Interaction, commands.Context], dir: Path, max_file_size: float
 ) -> None:
+    logger.info(f"Upload started {dir=} {max_file_size=}")
     if dir.is_file():
+        logger.debug(f"Uploading file {dir=} {max_file_size=}")
         await upload_file(inter, dir, max_file_size)
     else:
         dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
@@ -155,8 +158,10 @@ async def upload(
         file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
 
         if zip_files:
+            logger.debug(f"Uploading zip {zip_files=} {max_file_size=}")
             await upload_zip(inter, zip_files, max_file_size)
         if to_segment:
+            logger.debug(f"Uploading segment {to_segment=} {dir=} {max_file_size=}")
             await upload_segment(inter, to_segment, dir, max_file_size)
 
         for file_grp in file_grps:
@@ -338,6 +343,8 @@ async def record(
             )
         else:
             await msg.edit("Model Is Currenlty Offline or in Private Show")
+    except Exception:
+        logger.error("Unable to upload")
     finally:
         await inter.channel.send(
             f"{inter.author.mention} upload completed",

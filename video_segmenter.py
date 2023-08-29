@@ -26,23 +26,28 @@ def get_video_duration_size(video_path: Path) -> Tuple[float, float]:
     return (duration, video_path.stat().st_size / (1024**2))
 
 
-def recheck(dir: Path, max_size: float):
+def recheck(dir: Path, max_size: float, retry: int = 0):
     files = [file for file in dir.iterdir() if file.is_file()]
+    should_check = False
+    logger.debug("----")
     for file in files:
         file_size = file.stat().st_size / (1024**2)
         if file_size > max_size:
-            if (file_size - max_size) >= 1:
-                mx_size = file_size / 2
-            else:
-                mx_size = file_size - 1
+            should_check = True
+            logger.debug(f"{file_size=} {file_size - max_size}")
+            mx_size = file_size - (file_size - max_size)
+            mx_size -= retry
             segment_duration = media_stats(file, mx_size).segment_duration
             trim(
                 media=file,
                 segment_duration=segment_duration,
                 out_path=dir,
                 file_name=f"{file.name}%02d.mp4",
-                max_size=max_size,
             )
+            file.unlink()
+    retry += 1
+    if should_check:
+        recheck(dir, max_size, retry)
 
 
 def media_stats(media: Path, max_size: float):
@@ -62,9 +67,9 @@ def trim(
     media: Path,
     segment_duration: float,
     out_path: Path,
-    max_size: float,
     file_name: str = "%03d.mp4",
 ):
+    logger.info(f"Trimming {media=} {out_path=} {segment_duration=}")
     command = [
         "ffmpeg",
         "-i",
@@ -81,17 +86,17 @@ def trim(
         "1",
         f"{out_path.absolute()}/{file_name}",
     ]
-    subprocess.run(command, capture_output=True)
-    media.unlink()
-    recheck(out_path, max_size)
+    subprocess.run(command)
 
 
 def segment(media: Path, max_size: float, save_dir: Path) -> Path:
     out_path = Path(f"{save_dir}/{media.name[:-len(media.suffix)]}")
+
     try:
         out_path.mkdir()
     except FileExistsError:
         ...
+
     stats = media_stats(media, max_size)
     if stats.size <= max_size:
         out_path.rmdir()
@@ -99,13 +104,17 @@ def segment(media: Path, max_size: float, save_dir: Path) -> Path:
     elif stats.segment_duration <= 0:
         out_path.rmdir()
         raise ValueError("Max Size Is Too Low")
+
     logger.debug(f"[+] Trimming {media.name}")
     logger.debug(f"[+] Max Size: {max_size} Mb")
     logger.debug(f"[+] Duration: {stats.duration} Minutes")
     logger.debug(f"[+] Size: {stats.size} Mb")
     logger.debug(f"[+] Segment Duration: {stats.segment_duration / 60} Minutes")
     logger.debug(f"[+] Saving To: {out_path.absolute()}")
-    trim(media, stats.segment_duration, out_path, max_size=max_size)
+
+    trim(media, stats.segment_duration, out_path)
+    recheck(out_path, max_size)
+
     return out_path
 
 
