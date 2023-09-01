@@ -112,9 +112,7 @@ async def upload_file(
         logger.debug(f"Segmenter gave: {dir=} {max_file_size=}")
         await upload(inter, dir, max_file_size, channel)
     except ValueError:
-        if isinstance(channel, disnake.ThreadWithMessage):
-            await channel.thread.send(file=disnake.File(file))
-        elif isinstance(channel, disnake.TextChannel):
+        if isinstance(channel, disnake.TextChannel):
             await channel.send(file=disnake.File(file))
         else:
             await inter.channel.send(file=disnake.File(file))
