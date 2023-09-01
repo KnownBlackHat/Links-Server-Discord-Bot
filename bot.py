@@ -5,7 +5,7 @@ import os
 import time
 from asyncio.subprocess import Process
 from pathlib import Path
-from typing import Iterable, List, Set, Union
+from typing import Iterable, List, Optional, Set, Union
 from uuid import uuid4
 from zipfile import BadZipfile, ZipFile
 
@@ -152,7 +152,10 @@ async def upload_segment(
 
 
 async def upload(
-    inter: Union[disnake.Interaction, commands.Context], dir: Path, max_file_size: float
+    inter: Union[disnake.Interaction, commands.Context],
+    dir: Path,
+    max_file_size: float,
+    channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ) -> None:
     logger.debug(f"Upload started {dir=} {max_file_size=}")
     if dir.is_file():
@@ -178,9 +181,15 @@ async def upload(
         for file_grp in file_grps:
             try:
                 logger.debug(f"{list(x.bytes_length / 1024**2 for x in file_grp)}")
-                await inter.channel.send(files=file_grp)
+                if channel:
+                    if isinstance(channel, disnake.ThreadWithMessage):
+                        await channel.thread.send(files=file_grp)
+                    else:
+                        await channel.send(files=file_grp)
+                else:
+                    await inter.channel.send(files=file_grp)
             except Exception:
-                logger.error("Upload Failed")
+                logger.error("Upload Failed", exc_info=True)
         for file in dir_iter:
             file.unlink()
         dir.rmdir()
@@ -197,19 +206,17 @@ def is_guild_or_bot_owner():
     return commands.check(predicate)
 
 
-@bot.slash_command(name="serve", dm_permission=False)
-@is_guild_or_bot_owner()
-async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Attachment):
-    """
-    Download and Upload the provided links and segment the video if it is more than server upload limit
-
-    Parameters
-    ----------
-    attachment : The text file containing the links to download
-    """
-    await inter.send("Provided Links will be uploaded soon", ephemeral=True)
-    url_buff = await attachment.read()
-    url_list = url_buff.decode("utf-8").split("\n")
+async def serv(
+    inter: disnake.GuildCommandInteraction,
+    attachment: Union[disnake.Attachment, Path],
+    channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
+):
+    if isinstance(attachment, Path):
+        url_buff = attachment.read_text()
+    else:
+        await inter.send("Provided Links will be uploaded soon", ephemeral=True)
+        url_buff = (await attachment.read()).decode("utf-8")
+    url_list = url_buff.split("\n")
     url_set = {x for x in url_list}
     dropgalaxy_set = {x for x in url_set if x.startswith("https://dropgalaxy")}
     url_set = url_set - dropgalaxy_set
@@ -234,6 +241,7 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
                     inter,
                     destination,
                     float((inter.guild.filesize_limit / 1024**2) - 1),
+                    channel=channel,
                 )
             except Exception as e:
                 await inter.send(
@@ -244,16 +252,33 @@ async def serve(inter: disnake.GuildCommandInteraction, attachment: disnake.Atta
                 logger.error(f"Upload Failed {e}")
                 return
             logger.info("Upload Complete")
-
-            await inter.channel.send(
-                f"{inter.author.mention} Upload Completed",
-                allowed_mentions=disnake.AllowedMentions(),
-                delete_after=5,
-            )
+            if not isinstance(attachment, Path):
+                await inter.channel.send(
+                    f"{inter.author.mention} Upload Completed",
+                    allowed_mentions=disnake.AllowedMentions(),
+                    delete_after=5,
+                )
 
         asyncio.create_task(_upload())
 
     await queue.put(_dwnld)
+
+
+@bot.slash_command(name="serve", dm_permission=False)
+@is_guild_or_bot_owner()
+async def serve(
+    inter: disnake.GuildCommandInteraction,
+    attachment: disnake.Attachment,
+    channel: Optional[disnake.TextChannel] = None,
+):
+    """
+    Download and Upload the provided links and segment the video if it is more than server upload limit
+
+    Parameters
+    ----------
+    attachment : The text file containing the links to download
+    """
+    await serv(inter, attachment, channel)
 
 
 @tasks.loop()
@@ -384,7 +409,7 @@ async def slash_record(inter: disnake.GuildCommandInteraction, model: str):
     await record(inter, model)
 
 
-@bot.command(name="record")
+@bot.command(name="record", aliases=["r"])
 @is_guild_or_bot_owner()
 async def pre_record(ctx: commands.GuildContext, model: str):
     """
@@ -406,6 +431,35 @@ async def cmd(ctx: commands.GuildContext, *, args):
         args, stdout=asyncio.subprocess.PIPE
     )
     await ctx.send(file=disnake.File(io.BytesIO(await out.stdout.read()), filename="cmd.txt"))  # type: ignore
+
+
+@bot.slash_command(name="clone")
+async def clone(
+    inter: disnake.GuildCommandInteraction,
+    zip_file: disnake.Attachment,
+    channel: disnake.ForumChannel,
+):
+    """
+    Clone the provided zip file into a forum channel
+
+    Parameters
+    ----------
+    zip_file : The zip file to clone
+    channel : The forum channel to clone into
+    """
+    await inter.send("Cloning Started", ephemeral=True)
+    zip_bytes = await zip_file.read()
+    zip = ZipFile(io.BytesIO(zip_bytes))
+    zip_path = Path(str(uuid4()))
+    zip.extractall(zip_path)
+
+    async def _serv(file):
+        thread = await channel.create_thread(name=file.stem, content="_ _")
+        await serv(inter, file, channel=thread)
+
+    tasks = (_serv(file) for file in zip_path.iterdir())
+    await asyncio.gather(*tasks)
+    await inter.send("Cloning Completed", ephemeral=True)
 
 
 if __name__ == "__main__":
