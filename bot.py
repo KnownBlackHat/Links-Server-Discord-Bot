@@ -105,13 +105,19 @@ async def upload_file(
     inter: Union[disnake.Interaction, commands.Context],
     file: Path,
     max_file_size: float,
+    channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ) -> None:
     try:
         dir = await asyncio.to_thread(segment, file, max_file_size, Path("."))
         logger.debug(f"Segmenter gave: {dir=} {max_file_size=}")
-        await upload(inter, dir, max_file_size)
+        await upload(inter, dir, max_file_size, channel)
     except ValueError:
-        await inter.channel.send(file=disnake.File(file))
+        if isinstance(channel, disnake.ThreadWithMessage):
+            await channel.thread.send(file=disnake.File(file))
+        elif isinstance(channel, disnake.TextChannel):
+            await channel.send(file=disnake.File(file))
+        else:
+            await inter.channel.send(file=disnake.File(file))
     finally:
         file.unlink()
 
@@ -120,6 +126,7 @@ async def upload_zip(
     inter: Union[disnake.Interaction, commands.Context],
     zip_files: Iterable[Path],
     max_file_size: float,
+    channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ) -> None:
     zip_path = Path(str(uuid4()))
     for file in zip_files:
@@ -128,7 +135,7 @@ async def upload_zip(
             z.extractall(zip_path)
             file.unlink()
             move_files_to_root(zip_path)
-            await upload(inter, zip_path, max_file_size)
+            await upload(inter, zip_path, max_file_size, channel)
         except BadZipfile:
             file.unlink()
 
@@ -138,6 +145,7 @@ async def upload_segment(
     to_segment: Union[List, Set],
     dir: Path,
     max_file_size: float,
+    channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ) -> None:
     logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
     for file in to_segment:
@@ -148,7 +156,7 @@ async def upload_segment(
         except Exception:
             continue
         file.unlink()
-        await upload(inter, seg_dir, max_file_size)
+        await upload(inter, seg_dir, max_file_size, channel)
 
 
 async def upload(
@@ -160,7 +168,7 @@ async def upload(
     logger.debug(f"Upload started {dir=} {max_file_size=}")
     if dir.is_file():
         logger.debug(f"Uploading file {dir=} {max_file_size=}")
-        await upload_file(inter, dir, max_file_size)
+        await upload_file(inter, dir, max_file_size, channel)
     else:
         dir_iter = {x for x in map(lambda x: Path(x), dir.iterdir()) if x.is_file()}
         zip_files = {i for i in dir_iter if str(i).endswith(".zip")}
@@ -173,24 +181,24 @@ async def upload(
 
         if zip_files:
             logger.debug(f"Uploading zip {zip_files=} {max_file_size=}")
-            await upload_zip(inter, zip_files, max_file_size)
+            await upload_zip(inter, zip_files, max_file_size, channel)
         if to_segment:
             logger.debug(f"Uploading segment {to_segment=} {dir=} {max_file_size=}")
-            await upload_segment(inter, to_segment, dir, max_file_size)
+            await upload_segment(inter, to_segment, dir, max_file_size, channel)
 
         async def _file_grp_upload(file_grp):
             try:
                 logger.debug(f"{list(x.bytes_length / 1024**2 for x in file_grp)}")
-                if channel:
-                    if isinstance(channel, disnake.ThreadWithMessage):
-                        await channel.thread.send(files=file_grp)
-                    else:
-                        await channel.send(files=file_grp)
+                if isinstance(channel, disnake.ThreadWithMessage):
+                    await channel.thread.send(files=file_grp)
+                elif isinstance(channel, disnake.TextChannel):
+                    await channel.send(files=file_grp)
                 else:
                     await inter.channel.send(files=file_grp)
             except Exception:
                 logger.error("Upload Failed", exc_info=True)
 
+        logger.debug(f"Uploading to {channel=}")
         tasks = (_file_grp_upload(file_grp) for file_grp in file_grps)
         await asyncio.gather(*tasks)
         for file in dir_iter:
@@ -214,6 +222,7 @@ async def serv(
     attachment: Union[disnake.Attachment, Path],
     channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ):
+    logger.debug(f"Serv started {attachment=} {channel=}")
     if isinstance(attachment, Path):
         url_buff = attachment.read_text()
     else:
@@ -457,6 +466,7 @@ async def clone(
     zip.extractall(zip_path)
 
     async def _serv(file):
+        logger.debug(f"Creating thread for {file.stem}")
         thread = await channel.create_thread(name=file.stem, content="_ _")
         await serv(inter, file, channel=thread)
 
