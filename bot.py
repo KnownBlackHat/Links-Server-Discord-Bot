@@ -466,7 +466,7 @@ async def clone(
     zip.extractall(zip_path)
 
     async def _serv(file):
-        logger.debug(f"Creating thread for {file.stem}")
+        logger.info(f"Creating thread for {file.stem}")
         thread = await channel.create_thread(name=file.stem, content="_ _")
         await serv(inter, file, channel=thread)
 
