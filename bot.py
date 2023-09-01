@@ -186,7 +186,8 @@ async def upload(
             logger.debug(f"Uploading segment {to_segment=} {dir=} {max_file_size=}")
             await upload_segment(inter, to_segment, dir, max_file_size, channel)
 
-        async def _file_grp_upload(file_grp):
+        logger.debug(f"Uploading to {channel=}")
+        for file_grp in file_grps:
             try:
                 logger.debug(f"{list(x.bytes_length / 1024**2 for x in file_grp)}")
                 if isinstance(channel, disnake.ThreadWithMessage):
@@ -198,9 +199,6 @@ async def upload(
             except Exception:
                 logger.error("Upload Failed", exc_info=True)
 
-        logger.debug(f"Uploading to {channel=}")
-        tasks = (_file_grp_upload(file_grp) for file_grp in file_grps)
-        await asyncio.gather(*tasks)
         for file in dir_iter:
             file.unlink()
         dir.rmdir()
