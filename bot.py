@@ -178,7 +178,7 @@ async def upload(
             logger.debug(f"Uploading segment {to_segment=} {dir=} {max_file_size=}")
             await upload_segment(inter, to_segment, dir, max_file_size)
 
-        for file_grp in file_grps:
+        async def _file_grp_upload(file_grp):
             try:
                 logger.debug(f"{list(x.bytes_length / 1024**2 for x in file_grp)}")
                 if channel:
@@ -190,6 +190,9 @@ async def upload(
                     await inter.channel.send(files=file_grp)
             except Exception:
                 logger.error("Upload Failed", exc_info=True)
+
+        tasks = (_file_grp_upload(file_grp) for file_grp in file_grps)
+        await asyncio.gather(*tasks)
         for file in dir_iter:
             file.unlink()
         dir.rmdir()
