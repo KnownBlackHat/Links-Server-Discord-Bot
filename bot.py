@@ -6,6 +6,7 @@ import time
 from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Iterable, List, Optional, Set, Union
+from urllib.parse import urlparse
 from uuid import uuid4
 from zipfile import BadZipfile, ZipFile
 
@@ -47,6 +48,10 @@ class Adownloader:
         self.urls = urls
         self.logger = logger
 
+    def _get_file_ext_from_url(self, url: str) -> str:
+        path = urlparse(url).path
+        return path.split("/")[-1]
+
     async def _httpx_download(
         self, url: str, dir: Path, client: httpx.AsyncClient
     ) -> None:
@@ -54,7 +59,8 @@ class Adownloader:
             async with client.stream("GET", url) as response:
                 response.raise_for_status()
                 async with aiofiles.open(
-                    dir.joinpath(str(uuid4()) + "." + url.split(".")[-1]), mode="wb"
+                    dir.joinpath(str(uuid4()) + "." + self._get_file_ext_from_url(url)),
+                    mode="wb",
                 ) as file:
                     async for chunk in response.aiter_bytes():
                         await file.write(chunk)
@@ -231,7 +237,9 @@ async def serv(
 
     if dropgalaxy_set:
         async with httpx.AsyncClient(
-            limits=httpx.Limits(max_connections=10), timeout=httpx.Timeout(None)
+            limits=httpx.Limits(max_connections=10),
+            timeout=httpx.Timeout(None),
+            follow_redirects=True,
         ) as client:
             dropgalaxy_resolver = DropGalaxy(client)
             links = await dropgalaxy_resolver(dropgalaxy_set)
