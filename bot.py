@@ -56,7 +56,7 @@ class Adownloader:
         self, url: str, dir: Path, client: httpx.AsyncClient
     ) -> None:
         try:
-            async with client.stream("GET", url) as response:
+            async with client.stream("GET", url, follow_redirects=True) as response:
                 response.raise_for_status()
                 async with aiofiles.open(
                     dir.joinpath(str(uuid4()) + "." + self._get_file_ext_from_url(url)),
@@ -231,7 +231,7 @@ async def serv(
         await inter.send("Provided Links will be uploaded soon", ephemeral=True)
         url_buff = (await attachment.read()).decode("utf-8")
     url_list = url_buff.split("\n")
-    url_set = {x for x in url_list}
+    url_set = {x for x in url_list if x}
     dropgalaxy_set = {x for x in url_set if x.startswith("https://dropgalaxy")}
     url_set = url_set - dropgalaxy_set
 
@@ -239,7 +239,6 @@ async def serv(
         async with httpx.AsyncClient(
             limits=httpx.Limits(max_connections=10),
             timeout=httpx.Timeout(None),
-            follow_redirects=True,
         ) as client:
             dropgalaxy_resolver = DropGalaxy(client)
             links = await dropgalaxy_resolver(dropgalaxy_set)
