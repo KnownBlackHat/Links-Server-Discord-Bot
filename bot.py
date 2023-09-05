@@ -50,7 +50,9 @@ class Adownloader:
 
     def _get_file_ext_from_url(self, url: str) -> str:
         path = urlparse(url).path
-        return path.split("/")[-1]
+        if "." in path:
+            return path.split("/")[-1]
+        return f"{path.split('/')[-1]}.mp4"
 
     async def _httpx_download(
         self, url: str, dir: Path, client: httpx.AsyncClient
