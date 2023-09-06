@@ -17,6 +17,7 @@ from disnake.ext import commands, tasks
 
 from adropglaxy import DropGalaxy
 from NsfwLiveCam import NsfwLiveCam
+from terabox import TeraExtractor
 from video_segmenter import segment
 
 bot = commands.Bot(command_prefix="!", intents=disnake.Intents.all())
@@ -240,6 +241,7 @@ async def serv(
     url_list = url_buff.split("\n")
     url_set = {x for x in url_list if x}
     dropgalaxy_set = {x for x in url_set if x.startswith("https://dropgalaxy")}
+    tera_set = {x for x in url_set if x.startswith("https://terabox")}
     url_set = url_set - dropgalaxy_set
 
     if dropgalaxy_set:
@@ -251,6 +253,16 @@ async def serv(
             links = await dropgalaxy_resolver(dropgalaxy_set)
             links = {link for link in links if link}
             url_set.update(links)
+
+    if tera_set:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(None),
+            follow_redirects=True,
+            limits=httpx.Limits(max_connections=10),
+        ) as client:
+            extractor = TeraExtractor(tera_set, "Magic Browser", client)
+            data = await extractor()
+            url_set.update({url.resolved_link for url in data})
 
     async def _dwnld():
         downloader = Adownloader(urls=url_set)
