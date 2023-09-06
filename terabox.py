@@ -30,9 +30,6 @@ class TeraExtractor:
         return url.split("/")[-1]
 
     async def _sign(self, id: str) -> TeraData:
-        """
-        curl 'https://terabox-dl.qtcloud.workers.dev/api/get-info?shorturl=137NCeUOhhrzZt-wTgOvIaQ&pwd=' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0' -H 'Accept: */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://terabox-dl.qtcloud.workers.dev/' -H 'DNT: 1' -H 'Alt-Used: terabox-dl.qtcloud.workers.dev' -H 'Connection: keep-alive' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin'
-        """
         url = f"https://terabox-dl.qtcloud.workers.dev/api/get-info?shorturl={id}"
         headers = {
             "User-Agent": self.user_agent,
@@ -73,7 +70,7 @@ class TeraExtractor:
         resp = await self.client.post(url, headers=headers, json=data)
         resp.raise_for_status()
         if resp.status_code == 200 and resp.json().get("ok"):
-            return self.TeraLink(id=id, resolved_link=resp.json().get(self.user_agent))
+            return self.TeraLink(id=id, resolved_link=resp.json().get("downloadLink"))
         else:
             raise Exception(resp.json())
 
