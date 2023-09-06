@@ -58,7 +58,12 @@ class Adownloader:
         self, url: str, dir: Path, client: httpx.AsyncClient
     ) -> None:
         try:
-            async with client.stream("GET", url, follow_redirects=True) as response:
+            async with client.stream(
+                "GET",
+                url,
+                follow_redirects=True,
+                headers={"User-Agent": "Magic Browser"},
+            ) as response:
                 response.raise_for_status()
                 async with aiofiles.open(
                     dir.joinpath(str(uuid4()) + "." + self._get_file_ext_from_url(url)),
