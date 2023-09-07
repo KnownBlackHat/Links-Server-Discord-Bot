@@ -245,6 +245,7 @@ async def serv(
     url_set = url_set - dropgalaxy_set
     url_set = url_set - tera_set
 
+    logger.debug(f"DropGalaxy Links {len(dropgalaxy_set)=}")
     if dropgalaxy_set:
         async with httpx.AsyncClient(
             limits=httpx.Limits(max_connections=10),
@@ -253,6 +254,7 @@ async def serv(
             dropgalaxy_resolver = DropGalaxy(client)
             links = await dropgalaxy_resolver(dropgalaxy_set)
             links = {link for link in links if link}
+            logger.debug(f"Resolved DropGalaxy Links {len(links)=}")
             url_set.update(links)
 
     logger.debug(f"TeraBox Links {len(tera_set)=}")
