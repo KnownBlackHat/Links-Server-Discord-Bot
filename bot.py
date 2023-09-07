@@ -490,6 +490,13 @@ async def clone(inter: disnake.GuildCommandInteraction):
 async def clone_to_channel(
     inter: disnake.GuildCommandInteraction, zip_file: disnake.Attachment
 ):
+    """
+    Clone the provided zip file into a Text channels
+
+    Parameters
+    ----------
+    zip_file : The zip file to clone
+    """
     await inter.send("Cloning Started", ephemeral=True)
     zip_bytes = await zip_file.read()
     zip = ZipFile(io.BytesIO(zip_bytes))
