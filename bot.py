@@ -254,15 +254,16 @@ async def serv(
             links = {link for link in links if link}
             url_set.update(links)
 
-    logger.debug(f"TeraBox Links {tera_set=}")
+    logger.debug(f"TeraBox Links {len(tera_set)=}")
     if tera_set:
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(None),
             follow_redirects=True,
-            limits=httpx.Limits(max_connections=10),
+            limits=httpx.Limits(max_connections=20),
         ) as client:
             extractor = TeraExtractor(tera_set, "Magic Browser", client)
             data = await extractor()
+            logger.debug(f"Resolved TeraBox Links {len(data)=}")
             url_set.update({url.resolved_link for url in data})
 
     async def _dwnld():
