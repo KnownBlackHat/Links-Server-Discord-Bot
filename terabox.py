@@ -9,6 +9,12 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
+class FailedToGetData(Exception):
+    """
+    Raised when failed to get data from terabox
+    """
+
+
 class TeraExtractor:
     @dataclasses.dataclass
     class TeraLink:
@@ -45,6 +51,8 @@ class TeraExtractor:
         try:
             return self.TeraData(**resp.json())
         except TypeError:
+            if resp.json().get("message") == "Failed get data":
+                raise FailedToGetData
             raise Exception(f"{id} -> {resp.json()=}")
 
     async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
@@ -54,7 +62,7 @@ class TeraExtractor:
             id = id_or_url
         try:
             teradata = await self._sign(id)
-        except TypeError:
+        except FailedToGetData:
             logger.critical(f"Signing Failed: {id=}")
             self.failed.add(id)
             return
