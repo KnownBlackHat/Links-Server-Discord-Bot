@@ -243,6 +243,7 @@ async def serv(
     dropgalaxy_set = {x for x in url_set if x.startswith("https://dropgalaxy")}
     tera_set = {x for x in url_set if x.startswith("https://terabox")}
     url_set = url_set - dropgalaxy_set
+    url_set = url_set - tera_set
 
     if dropgalaxy_set:
         async with httpx.AsyncClient(
