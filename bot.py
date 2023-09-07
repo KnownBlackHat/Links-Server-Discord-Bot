@@ -254,6 +254,7 @@ async def serv(
             links = {link for link in links if link}
             url_set.update(links)
 
+    logger.debug(f"TeraBox Links {tera_set=}")
     if tera_set:
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(None),
@@ -262,7 +263,6 @@ async def serv(
         ) as client:
             extractor = TeraExtractor(tera_set, "Magic Browser", client)
             data = await extractor()
-            logger.debug(data)
             url_set.update({url.resolved_link for url in data})
 
     async def _dwnld():
