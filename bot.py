@@ -270,7 +270,9 @@ async def serv(
                     data = await extractor()
                     break
                 except Exception:
-                    logger.critical("TeraBox Extractor Failed, Retrying...")
+                    logger.critical(
+                        "TeraBox Extractor Failed, Retrying...", exc_info=True
+                    )
                     continue
             logger.debug(f"Resolved TeraBox Links {len(data)=}")
             logger.critical(f"Failed TeraBox Links {extractor.failed}")
