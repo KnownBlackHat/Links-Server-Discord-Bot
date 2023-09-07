@@ -482,7 +482,32 @@ async def cmd(ctx: commands.GuildContext, *, args):
 
 
 @bot.slash_command(name="clone")
-async def clone(
+async def clone(inter: disnake.GuildCommandInteraction):
+    """Clone Commands"""
+
+
+@clone.sub_command(name="to_channel")
+async def clone_to_channel(
+    inter: disnake.GuildCommandInteraction, zip_file: disnake.Attachment
+):
+    await inter.send("Cloning Started", ephemeral=True)
+    zip_bytes = await zip_file.read()
+    zip = ZipFile(io.BytesIO(zip_bytes))
+    zip_path = Path(str(uuid4()))
+    zip.extractall(zip_path)
+
+    async def _serv(file):
+        logger.info(f"Creating thread for {file.stem}")
+        channel = await inter.guild.create_text_channel(name=file.stem)
+        await serv(inter, file, channel=channel)
+
+    tasks = (_serv(file) for file in zip_path.iterdir())
+    await asyncio.gather(*tasks)
+    await inter.send("Cloning Completed", ephemeral=True)
+
+
+@clone.sub_command(name="to_forum")
+async def clone_to_forum(
     inter: disnake.GuildCommandInteraction,
     zip_file: disnake.Attachment,
     channel: disnake.ForumChannel,
