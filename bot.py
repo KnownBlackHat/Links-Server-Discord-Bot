@@ -273,6 +273,7 @@ async def serv(
                     logger.critical("TeraBox Extractor Failed, Retrying...")
                     continue
             logger.debug(f"Resolved TeraBox Links {len(data)=}")
+            logger.critical(f"Failed TeraBox Links {extractor.failed}")
             url_set.update({url.resolved_link for url in data})
 
     async def _dwnld():

@@ -1,9 +1,12 @@
 import asyncio
 import dataclasses
+import logging
 import sys
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class TeraExtractor:
@@ -25,6 +28,7 @@ class TeraExtractor:
         self.urls = urls
         self.client = client
         self.user_agent = user_agent
+        self.failed = set()
 
     def _get_id(self, url: str) -> str:
         return url.split("/")[-1]
@@ -41,14 +45,19 @@ class TeraExtractor:
         try:
             return self.TeraData(**resp.json())
         except TypeError:
-            raise Exception(resp.json())
+            raise Exception(f"{id} -> {resp.json()=}")
 
-    async def _get_download_url(self, id_or_url: str) -> TeraLink:
+    async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
         if id_or_url.startswith("http"):
             id = self._get_id(id_or_url)
         else:
             id = id_or_url
-        teradata = await self._sign(id)
+        try:
+            teradata = await self._sign(id)
+        except TypeError:
+            logger.critical(f"Signing Failed: {id=}")
+            self.failed.add(id)
+            return
         url = "https://terabox-dl.qtcloud.workers.dev/api/get-download"
         headers = {
             "Content-Type": "application/json",
@@ -77,6 +86,7 @@ class TeraExtractor:
     async def __call__(self) -> List[TeraLink]:
         tasks = (self._get_download_url(id) for id in self.urls if id)
         data = await asyncio.gather(*tasks)
+        data = [x for x in data if x]
         return data
 
 
