@@ -278,38 +278,43 @@ async def serv(
             logger.critical(f"Failed TeraBox Links {extractor.failed}")
             url_set.update({url.resolved_link for url in data})
 
-    async def _dwnld():
-        downloader = Adownloader(urls=url_set)
-        destination = await downloader.download()
+    url_list = list(url_set)
+    url_grp = [url_list[i : i + 100] for i in range(0, len(url_set), 100)]
+    for url in url_grp:
+        url_set = set(url)
 
-        async def _upload():
-            logger.info(f"Uploading from {destination}")
-            try:
-                await upload(
-                    inter,
-                    destination,
-                    float((inter.guild.filesize_limit / 1024**2) - 1),
-                    channel=channel,
-                )
-            except Exception as e:
-                await inter.send(
-                    file=disnake.File(
-                        io.BytesIO(str(e).encode("utf-8")), filename="exception.txt"
+        async def _dwnld():
+            downloader = Adownloader(urls=url_set)
+            destination = await downloader.download()
+
+            async def _upload():
+                logger.info(f"Uploading from {destination}")
+                try:
+                    await upload(
+                        inter,
+                        destination,
+                        float((inter.guild.filesize_limit / 1024**2) - 1),
+                        channel=channel,
                     )
-                )
-                logger.error(f"Upload Failed {e}")
-                return
-            logger.info("Upload Complete")
-            if not isinstance(attachment, Path):
-                await inter.channel.send(
-                    f"{inter.author.mention} Upload Completed",
-                    allowed_mentions=disnake.AllowedMentions(),
-                    delete_after=5,
-                )
+                except Exception as e:
+                    await inter.send(
+                        file=disnake.File(
+                            io.BytesIO(str(e).encode("utf-8")), filename="exception.txt"
+                        )
+                    )
+                    logger.error(f"Upload Failed {e}")
+                    return
+                logger.info("Upload Complete")
+                if not isinstance(attachment, Path):
+                    await inter.channel.send(
+                        f"{inter.author.mention} Upload Completed",
+                        allowed_mentions=disnake.AllowedMentions(),
+                        delete_after=5,
+                    )
 
-        asyncio.create_task(_upload())
+            asyncio.create_task(_upload())
 
-    await queue.put(_dwnld)
+        await queue.put(_dwnld)
 
 
 @bot.slash_command(name="serve", dm_permission=False)
