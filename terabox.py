@@ -104,6 +104,15 @@ class TeraExtractor:
             resp = await self.client.post(url, headers=headers, json=data)
             resp.raise_for_status()
 
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                logger.warning("Rate Limited")
+                retry_after = int(e.response.headers.get("Retry-After", 60))
+                await asyncio.sleep(retry_after)
+                await self._get_download_url(id)
+            else:
+                raise
+
         except Exception:
             logger.critical(f"Failed to get download link: {id=}", exc_info=True)
             await self._get_download_url(id)
