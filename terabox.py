@@ -57,12 +57,11 @@ class TeraExtractor:
         resp.raise_for_status()
         try:
             return self.TeraData(**resp.json())
-        except Exception:
+        except TypeError:
             if resp.json().get("message") == "Failed get data":
                 raise FailedToGetData
             elif resp.json().get("message") == "Unexpected token":
                 raise UnexpectedData
-            raise Exception(f"{id} -> {resp.json()=}")
 
     async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
         if id_or_url.startswith("http"):
@@ -79,6 +78,15 @@ class TeraExtractor:
             logger.critical("Error In Fetching Token")
             self.retry.add(id)
             return
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                retry_after = int(e.response.headers.get("Retry-After", 60))
+                logger.warning(f"Rate Limited, Sleeping for {retry_after}")
+                await asyncio.sleep(retry_after)
+                await self._get_download_url(id)
+                return
+            else:
+                raise
         except Exception:
             teradata = await self._sign(id)
 
@@ -106,8 +114,8 @@ class TeraExtractor:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
-                logger.warning("Rate Limited")
                 retry_after = int(e.response.headers.get("Retry-After", 60))
+                logger.warning(f"Rate Limited, Sleeping for {retry_after}")
                 await asyncio.sleep(retry_after)
                 await self._get_download_url(id)
             else:
