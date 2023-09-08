@@ -35,6 +35,7 @@ class TeraExtractor:
         self.client = client
         self.user_agent = user_agent
         self.failed = set()
+        self.retry = set()
 
     def _get_id(self, url: str) -> str:
         return url.split("/")[-1]
@@ -66,6 +67,10 @@ class TeraExtractor:
             logger.critical(f"Signing Failed: {id=}")
             self.failed.add(id)
             return
+        except Exception:
+            logger.critical("Error In Fetching Token", exc_info=True)
+            self.retry.add(id)
+            return
         url = "https://terabox-dl.qtcloud.workers.dev/api/get-download"
         headers = {
             "Content-Type": "application/json",
@@ -91,9 +96,15 @@ class TeraExtractor:
         else:
             raise Exception(resp.json())
 
-    async def __call__(self) -> List[TeraLink]:
-        tasks = (self._get_download_url(id) for id in self.urls if id)
+    async def __call__(self, urls: Optional[Set] = None) -> List[TeraLink]:
+        if not urls:
+            urls = self.urls
+        self.retry = set()
+        tasks = (self._get_download_url(id) for id in urls if id)
         data = await asyncio.gather(*tasks)
+        if self.retry:
+            logger.critical(f"Retrying {len(self.retry)=}")
+            await self.__call__(self.retry)
         data = [x for x in data if x]
         return data
 

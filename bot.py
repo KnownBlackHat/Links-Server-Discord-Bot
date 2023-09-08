@@ -265,15 +265,7 @@ async def serv(
             limits=httpx.Limits(max_connections=20),
         ) as client:
             extractor = TeraExtractor(tera_set, "Magic Browser", client)
-            while True:
-                try:
-                    data = await extractor()
-                    break
-                except Exception:
-                    logger.critical(
-                        "TeraBox Extractor Failed, Retrying...", exc_info=True
-                    )
-                    continue
+            data = await extractor()
             logger.debug(f"Resolved TeraBox Links {len(data)=}")
             logger.critical(f"Failed TeraBox Links {extractor.failed}")
             url_set.update({url.resolved_link for url in data})
