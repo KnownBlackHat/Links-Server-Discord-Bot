@@ -15,6 +15,12 @@ class FailedToGetData(Exception):
     """
 
 
+class UnexpectedData(Exception):
+    """
+    Raised when Unexpected Data recieved from terabox
+    """
+
+
 class TeraExtractor:
     @dataclasses.dataclass
     class TeraLink:
@@ -51,9 +57,11 @@ class TeraExtractor:
         resp.raise_for_status()
         try:
             return self.TeraData(**resp.json())
-        except TypeError:
+        except Exception:
             if resp.json().get("message") == "Failed get data":
                 raise FailedToGetData
+            elif resp.json().get("message") == "Unexpected token":
+                raise UnexpectedData
             raise Exception(f"{id} -> {resp.json()=}")
 
     async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
@@ -67,10 +75,13 @@ class TeraExtractor:
             logger.critical(f"Signing Failed: {id=}")
             self.failed.add(id)
             return
-        except Exception:
-            logger.critical("Error In Fetching Token", exc_info=True)
+        except UnexpectedData:
+            logger.critical("Error In Fetching Token")
             self.retry.add(id)
             return
+        except Exception:
+            teradata = await self._sign(id)
+
         url = "https://terabox-dl.qtcloud.workers.dev/api/get-download"
         headers = {
             "Content-Type": "application/json",
@@ -89,12 +100,23 @@ class TeraExtractor:
             "timestamp": teradata.timestamp,
             "uk": teradata.uk,
         }
-        resp = await self.client.post(url, headers=headers, json=data)
-        resp.raise_for_status()
-        if resp.status_code == 200 and resp.json().get("ok"):
-            return self.TeraLink(id=id, resolved_link=resp.json().get("downloadLink"))
+        try:
+            resp = await self.client.post(url, headers=headers, json=data)
+            resp.raise_for_status()
+
+        except Exception:
+            logger.critical(f"Failed to get download link: {id=}", exc_info=True)
+            await self._get_download_url(id)
+
         else:
-            raise Exception(resp.json())
+            if resp.status_code == 200 and resp.json().get("ok"):
+                return self.TeraLink(
+                    id=id, resolved_link=resp.json().get("downloadLink")
+                )
+            elif "Unexpected token" in resp.json().get("message", ""):
+                await self._get_download_url(id)
+            else:
+                raise Exception(resp.json())
 
     async def __call__(self, urls: Optional[Set] = None) -> List[TeraLink]:
         if not urls:
@@ -103,9 +125,10 @@ class TeraExtractor:
         tasks = (self._get_download_url(id) for id in urls if id)
         data = await asyncio.gather(*tasks)
         if self.retry:
-            logger.critical(f"Retrying {len(self.retry)=}")
+            logger.warning(f"Retrying {len(self.retry)=}")
             await self.__call__(self.retry)
         data = [x for x in data if x]
+        logger.info(f"Resolved {len(data)} TeraLinks")
         return data
 
 

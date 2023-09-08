@@ -260,18 +260,19 @@ async def serv(
     logger.debug(f"TeraBox Links {len(tera_set)=}")
     if tera_set:
         async with httpx.AsyncClient(
-            timeout=httpx.Timeout(None, read=None, connect=None, write=None, pool=None),
+            timeout=httpx.Timeout(None, read=None),
             follow_redirects=True,
             limits=httpx.Limits(max_connections=20),
         ) as client:
             extractor = TeraExtractor(tera_set, "Magic Browser", client)
             data = await extractor()
             logger.debug(f"Resolved TeraBox Links {len(data)=}")
-            logger.critical(f"Failed TeraBox Links {extractor.failed}")
+            logger.critical(f"{len(extractor.failed)} TeraLinks Failed To Sign")
             url_set.update({url.resolved_link for url in data})
 
     url_list = list(url_set)
     url_grp = [url_list[i : i + 100] for i in range(0, len(url_set), 100)]
+    logger.debug(f"Url Group {url_grp=}")
     for url in url_grp:
         url_set = set(url)
 
