@@ -260,7 +260,7 @@ async def serv(
     logger.debug(f"TeraBox Links {len(tera_set)=}")
     if tera_set:
         async with httpx.AsyncClient(
-            timeout=httpx.Timeout(None),
+            timeout=httpx.Timeout(None, read=None, connect=None, write=None, pool=None),
             follow_redirects=True,
             limits=httpx.Limits(max_connections=20),
         ) as client:
