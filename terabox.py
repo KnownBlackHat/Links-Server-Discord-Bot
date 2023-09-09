@@ -115,7 +115,8 @@ class TeraExtractor:
                 await asyncio.sleep(retry_after)
                 await self._get_download_url(id)
             else:
-                raise
+                logger.error(f"Http Error: {e.response.status_code}")
+                return
 
         except Exception:
             logger.critical(f"Failed to get download link: {id=}", exc_info=True)
