@@ -64,6 +64,7 @@ class TeraExtractor:
                 raise UnexpectedData
 
     async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
+        await asyncio.sleep(0.2)
         if id_or_url.startswith("http"):
             id = self._get_id(id_or_url)
         else:
