@@ -60,10 +60,9 @@ class TeraExtractor:
         except TypeError:
             if resp.json().get("message") == "Failed get data":
                 raise FailedToGetData
-            elif resp.json().get("message") == "Unexpected token":
-                raise UnexpectedData
             else:
-                raise
+                await asyncio.sleep(0.5)
+                return await self._sign(id)
 
     async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
         await asyncio.sleep(0.2)
@@ -77,10 +76,6 @@ class TeraExtractor:
             logger.critical(f"Signing Failed: {id=}")
             self.failed.add(id)
             return
-        except UnexpectedData:
-            logger.critical("Error In Fetching Token")
-            self.retry.add(id)
-            return
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
                 retry_after = int(e.response.headers.get("Retry-After", 60))
@@ -90,8 +85,6 @@ class TeraExtractor:
                 return
             else:
                 raise
-        except Exception:
-            teradata = await self._sign(id)
 
         url = "https://terabox-dl.qtcloud.workers.dev/api/get-download"
         headers = {
