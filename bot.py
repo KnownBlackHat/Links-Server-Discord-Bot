@@ -271,13 +271,13 @@ async def serv(
             url_set.update({url.resolved_link for url in data})
 
     url_list = list(url_set)
-    url_grp = [url_list[i : i + 100] for i in range(0, len(url_set), 100)]
-    logger.debug(f"Url Group {url_grp=}")
+    url_grp = [url_list[i : i + 100] for i in range(0, len(url_list), 100)]
+    logger.debug(f"Url Group {len(url_grp)=}")
     for url in url_grp:
-        url_set = set(url)
+        url = set(url)
 
-        async def _dwnld():
-            downloader = Adownloader(urls=url_set)
+        async def _dwnld(urls):
+            downloader = Adownloader(urls=urls)
             destination = await downloader.download()
 
             async def _upload():
@@ -307,7 +307,7 @@ async def serv(
 
             asyncio.create_task(_upload())
 
-        await queue.put(_dwnld)
+        await queue.put((_dwnld, url))
 
 
 @bot.slash_command(name="serve", dm_permission=False)
@@ -331,8 +331,8 @@ async def serve(
 async def run():
     if queue.empty():
         return
-    _f = await queue.get()
-    await _f()
+    _f, parm = await queue.get()
+    await _f(parm)
     queue.task_done()
 
 

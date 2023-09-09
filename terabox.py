@@ -104,7 +104,6 @@ class TeraExtractor:
             "Referer": "https://terabox-dl.qtcloud.workers.dev/",
             "User-Agent": self.user_agent,
         }
-        logger.debug(f"Here is: {teradata=}")
         data = {
             "fs_id": teradata.list[0].get("fs_id"),
             "shareid": teradata.shareid,
