@@ -62,6 +62,8 @@ class TeraExtractor:
                 raise FailedToGetData
             elif resp.json().get("message") == "Unexpected token":
                 raise UnexpectedData
+            else:
+                raise
 
     async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
         await asyncio.sleep(0.2)
@@ -102,6 +104,7 @@ class TeraExtractor:
             "Referer": "https://terabox-dl.qtcloud.workers.dev/",
             "User-Agent": self.user_agent,
         }
+        logger.debug(f"Here is: {teradata=}")
         data = {
             "fs_id": teradata.list[0].get("fs_id"),
             "shareid": teradata.shareid,
