@@ -62,6 +62,7 @@ class TeraExtractor:
                 raise FailedToGetData
             else:
                 await asyncio.sleep(0.5)
+                logger.debug(f"Resigning {id=}")
                 return await self._sign(id)
 
     async def _get_download_url(self, id_or_url: str) -> Optional[TeraLink]:
@@ -118,9 +119,10 @@ class TeraExtractor:
                 logger.error(f"Http Error: {e.response.status_code}")
                 return
 
-        except Exception:
-            logger.critical(f"Failed to get download link: {id=}", exc_info=True)
+        except Exception as e:
+            logger.debug(f"Got {e} in fetching download url")
             await self._get_download_url(id)
+            return
 
         else:
             if resp.status_code == 200 and resp.json().get("ok"):
