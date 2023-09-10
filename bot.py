@@ -4,6 +4,7 @@ import logging
 import os
 import time
 from asyncio.subprocess import Process
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterable, List, Optional, Set, Union
 from urllib.parse import urlparse
@@ -39,6 +40,7 @@ logging.getLogger("video_segmenter").setLevel(logging.DEBUG)
 logging.getLogger("disnake").setLevel(logging.INFO)
 
 queue = asyncio.Queue()
+loop = asyncio.get_running_loop()
 
 
 class Adownloader:
@@ -122,8 +124,10 @@ async def upload_file(
     channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ) -> None:
     try:
-        dir = await asyncio.to_thread(segment, file, max_file_size, Path("."))
-        logger.debug(f"Segmenter gave: {dir=} {max_file_size=}")
+        with ProcessPoolExecutor() as pool:
+            dir = await loop.run_in_executor(
+                pool, segment, file, max_file_size, Path(".")
+            )
         await upload(inter, dir, max_file_size, channel)
     except ValueError:
         if isinstance(channel, disnake.TextChannel):
@@ -162,9 +166,10 @@ async def upload_segment(
     logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
     for file in to_segment:
         try:
-            seg_dir = await asyncio.to_thread(
-                segment, media=file, max_size=max_file_size, save_dir=dir
-            )
+            with ProcessPoolExecutor() as pool:
+                seg_dir = await loop.run_in_executor(
+                    pool, segment, file, max_file_size, dir
+                )
         except Exception:
             continue
         file.unlink()
