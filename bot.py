@@ -272,7 +272,7 @@ async def serv(
             url_set.update({url.resolved_link for url in data})
 
     url_list = list(url_set)
-    url_grp = [url_list[i : i + 50] for i in range(0, len(url_list), 50)]
+    url_grp = [url_list[i : i + 100] for i in range(0, len(url_list), 100)]
     logger.debug(f"Url Group {len(url_grp)=}")
     for url in url_grp:
         url = set(url)
