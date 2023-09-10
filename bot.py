@@ -40,7 +40,6 @@ logging.getLogger("video_segmenter").setLevel(logging.DEBUG)
 logging.getLogger("disnake").setLevel(logging.INFO)
 
 queue = asyncio.Queue()
-loop = asyncio.get_running_loop()
 
 
 class Adownloader:
@@ -124,6 +123,7 @@ async def upload_file(
     channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ) -> None:
     try:
+        loop = asyncio.get_running_loop()
         with ProcessPoolExecutor() as pool:
             dir = await loop.run_in_executor(
                 pool, segment, file, max_file_size, Path(".")
@@ -166,6 +166,7 @@ async def upload_segment(
     logger.info(f"{len(to_segment)} files found which are more than 25mb detected")
     for file in to_segment:
         try:
+            loop = asyncio.get_running_loop()
             with ProcessPoolExecutor() as pool:
                 seg_dir = await loop.run_in_executor(
                     pool, segment, file, max_file_size, dir
