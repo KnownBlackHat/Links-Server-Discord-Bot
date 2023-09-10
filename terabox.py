@@ -98,6 +98,8 @@ class TeraExtractor:
             "Referer": "https://terabox-dl.qtcloud.workers.dev/",
             "User-Agent": self.user_agent,
         }
+        if teradata.list[0].get("is_dir", "0") == "1":
+            return
         data = {
             "fs_id": teradata.list[0].get("fs_id"),
             "shareid": teradata.shareid,
