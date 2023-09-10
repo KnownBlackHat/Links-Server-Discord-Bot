@@ -231,6 +231,7 @@ async def serv(
     inter: disnake.GuildCommandInteraction,
     attachment: Union[disnake.Attachment, Path],
     channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
+    sequential_upload: bool = True,
 ):
     logger.debug(f"Serv started {attachment=} {channel=}")
     if isinstance(attachment, Path):
@@ -305,7 +306,12 @@ async def serv(
                         delete_after=5,
                     )
 
-            asyncio.create_task(_upload())
+            if sequential_upload:
+                logger.info("Doing Sequential Upload")
+                await _upload()
+            else:
+                logger.info("Doing Concurrent Upload")
+                asyncio.create_task(_upload())
 
         await queue.put((_dwnld, url))
 
