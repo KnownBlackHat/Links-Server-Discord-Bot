@@ -129,10 +129,9 @@ class TeraExtractor:
                 return self.TeraLink(
                     id=id, resolved_link=resp.json().get("downloadLink")
                 )
-            elif "Unexpected token" in resp.json().get("message", ""):
-                await self._get_download_url(id)
             else:
-                raise Exception(resp.json())
+                logger.warning(f"Retrying to get download url for {id=}")
+                await self._get_download_url(id)
 
     async def __call__(self, urls: Optional[Set] = None) -> List[TeraLink]:
         if not urls:
