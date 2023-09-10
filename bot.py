@@ -189,7 +189,7 @@ async def upload(
         }
         dir_iter = sorted(dir_iter - to_segment)
         total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
-        file_grps = [total_file[i : i + 10] for i in range(0, len(total_file), 10)]
+        file_grps = [total_file[i : i + 8] for i in range(0, len(total_file), 8)]
 
         if zip_files:
             logger.debug(f"Uploading zip {zip_files=} {max_file_size=}")
@@ -200,8 +200,9 @@ async def upload(
 
         logger.debug(f"Uploading to {channel=}")
         for file_grp in file_grps:
+            len_file = [x.bytes_length / 1024**2 for x in file_grp]
             try:
-                logger.debug(f"{list(x.bytes_length / 1024**2 for x in file_grp)}")
+                logger.debug(f"Uploading {sum(len_file)}")
                 if isinstance(channel, disnake.ThreadWithMessage):
                     await channel.thread.send(files=file_grp)
                 elif isinstance(channel, disnake.TextChannel):
@@ -209,7 +210,7 @@ async def upload(
                 else:
                     await inter.channel.send(files=file_grp)
             except Exception:
-                logger.error("Upload Failed", exc_info=True)
+                logger.error(f"Upload Failed {sum(len_file)} {len_file=}")
 
         for file in dir_iter:
             file.unlink()
@@ -322,6 +323,7 @@ async def serve(
     inter: disnake.GuildCommandInteraction,
     attachment: disnake.Attachment,
     channel: Optional[disnake.TextChannel] = None,
+    sequential_upload: bool = True,
 ):
     """
     Download and Upload the provided links and segment the video if it is more than server upload limit
@@ -330,7 +332,7 @@ async def serve(
     ----------
     attachment : The text file containing the links to download
     """
-    await serv(inter, attachment, channel)
+    await serv(inter, attachment, channel, sequential_upload=sequential_upload)
 
 
 @tasks.loop()
