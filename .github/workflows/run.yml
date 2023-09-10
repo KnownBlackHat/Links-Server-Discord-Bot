@@ -8,33 +8,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-
-    - name: Cache Python dependencies
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Cache APT packages
-      uses: actions/cache@v2
-      with:
-        path: ~/.apt/cache
-        key: ${{ runner.os }}-apt
-        restore-keys: |
-          ${{ runner.os }}-apt
-
-    - name: Setup Python
-      uses: actions/setup-python@v2
+    - uses: actions/setup-python@v4
       with:
         python-version: '3.11'
 
     - name: Install Dependency
       run: |
+        pip install -r requirements.txt
         sudo apt update -y
         sudo apt install ffmpeg -y
-        pip install -r requirements.txt
 
     - name: Run Bot
-      run: TOKEN=${{ secrets.token }} python bot.py
+      run: TOKEN=${{ secrets.token  }} python bot.py
