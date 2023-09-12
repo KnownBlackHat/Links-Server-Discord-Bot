@@ -40,6 +40,8 @@ logging.getLogger("video_segmenter").setLevel(logging.DEBUG)
 logging.getLogger("disnake").setLevel(logging.INFO)
 
 queue = asyncio.Queue()
+PREMIUM_SERVER = bot.get_guild(123456789)
+PREMIUM_ROLE_ID = 1234567890
 
 
 class Adownloader:
@@ -99,6 +101,47 @@ class Adownloader:
             if len(not_downloaded):
                 logger.info(f"Failed To Download {not_downloaded}")
         return dir
+
+
+def is_guild_or_bot_owner():
+    def predicate(inter):
+        return (
+            inter.guild is not None
+            and inter.guild.owner_id == inter.author.id
+            or inter.author.id == bot.owner_id
+        )
+
+    return commands.check(predicate)
+
+
+def is_premium_owner():
+    def predicate(inter: disnake.GuildCommandInteraction) -> bool:
+        if not PREMIUM_SERVER or not PREMIUM_ROLE_ID:
+            return False
+        uid = inter.author.id
+        if inter.guild.owner_id != inter.author.id:
+            return False
+        elif member := PREMIUM_SERVER.get_member(uid):
+            member.get_role(PREMIUM_ROLE_ID)
+            if member:
+                return True
+        return False
+
+    return commands.check(predicate)  # type: ignore
+
+
+def is_premium_user():
+    def predicate(inter: disnake.CommandInteraction) -> bool:
+        if not PREMIUM_SERVER or not PREMIUM_ROLE_ID:
+            return False
+        uid = inter.author.id
+        if member := PREMIUM_SERVER.get_member(uid):
+            member.get_role(PREMIUM_ROLE_ID)
+            if member:
+                return True
+        return False
+
+    return commands.check(predicate)  # type: ignore
 
 
 def move_files_to_root(root_dir_path):
@@ -223,17 +266,6 @@ async def upload(
         dir.rmdir()
 
 
-def is_guild_or_bot_owner():
-    def predicate(inter):
-        return (
-            inter.guild is not None
-            and inter.guild.owner_id == inter.author.id
-            or inter.author.id == bot.owner_id
-        )
-
-    return commands.check(predicate)
-
-
 async def serv(
     inter: disnake.GuildCommandInteraction,
     attachment: Union[disnake.Attachment, Path],
@@ -324,7 +356,7 @@ async def serv(
 
 
 @bot.slash_command(name="serve", dm_permission=False)
-@is_guild_or_bot_owner()
+@is_premium_owner()
 async def serve(
     inter: disnake.GuildCommandInteraction,
     attachment: disnake.Attachment,
@@ -348,29 +380,6 @@ async def run():
     _f, parm = await queue.get()
     await _f(parm)
     queue.task_done()
-
-
-@bot.slash_command(name="status")
-@is_guild_or_bot_owner()
-async def status(inter: disnake.CommandInteraction) -> None:
-    """
-    Shows system status
-    """
-    files_size = await asyncio.subprocess.create_subprocess_shell(
-        "ls -sh .", stdout=asyncio.subprocess.PIPE
-    )
-    system_space = await asyncio.subprocess.create_subprocess_shell(
-        "df -h", stdout=asyncio.subprocess.PIPE
-    )
-    text = f"""
-Files Size\n
-{(await files_size.stdout.read()).decode('utf-8')}
-System Space\n
-{(await system_space.stdout.read()).decode('utf-8')}
-    """
-    await inter.send(
-        file=disnake.File(io.BytesIO(text.encode("utf-8")), filename="status.txt")
-    )
 
 
 @commands.is_owner()
@@ -457,7 +466,7 @@ async def record(
 
 
 @bot.slash_command(name="record")
-@is_guild_or_bot_owner()
+@is_premium_user()
 async def slash_record(inter: disnake.GuildCommandInteraction, model: str):
     """
     Record the stream of the provided model
@@ -470,7 +479,7 @@ async def slash_record(inter: disnake.GuildCommandInteraction, model: str):
 
 
 @bot.command(name="record", aliases=["r"])
-@is_guild_or_bot_owner()
+@is_premium_user()
 async def pre_record(ctx: commands.GuildContext, model: str):
     """
     Record the stream of the provided model
@@ -494,6 +503,7 @@ async def cmd(ctx: commands.GuildContext, *, args):
 
 
 @bot.slash_command(name="clone")
+@is_premium_owner()
 async def clone(inter: disnake.GuildCommandInteraction):
     """Clone Commands"""
 
@@ -553,6 +563,34 @@ async def clone_to_forum(
     tasks = (_serv(file) for file in zip_path.iterdir())
     await asyncio.gather(*tasks)
     await inter.send("Cloning Completed", ephemeral=True)
+
+
+@bot.event
+async def on_slash_command_error(inter: disnake.CommandInteraction, error):
+    if isinstance(error, commands.errors.CommandOnCooldown):
+        await inter.send(f"Command is on cooldown {error.retry_after:.2f} seconds")
+    elif isinstance(error, commands.errors.MissingPermissions):
+        await inter.send("You don't have the required permissions to run this command")
+    elif isinstance(error, commands.errors.NotOwner):
+        await inter.send("You are not the owner of this bot")
+    elif isinstance(error, commands.errors.MissingRequiredArgument):
+        await inter.send("Missing Required Argument")
+    elif isinstance(error, commands.errors.BadArgument):
+        await inter.send("Bad Argument")
+    elif isinstance(error, commands.errors.CommandNotFound):
+        await inter.send("Command Not Found")
+    elif isinstance(error, commands.errors.MissingRole):
+        await inter.send("You don't have the required role to run this command")
+    elif isinstance(error, commands.errors.CheckFailure):
+        await inter.send(
+            """
+                         Buy Premium to use this command
+                         Check My Profile for server invite link
+                         from where you can buy premium
+                         """
+        )
+    else:
+        await inter.send(f"Something went wrong {error}")
 
 
 if __name__ == "__main__":
