@@ -583,14 +583,15 @@ async def on_slash_command_error(inter: disnake.CommandInteraction, error):
         await inter.send("You don't have the required role to run this command")
     elif isinstance(error, commands.errors.CheckFailure):
         await inter.send(
-            """
-                         Buy Premium to use this command
-                         Check My Profile for server invite link
-                         from where you can buy premium
-                         """
+            "Buy Premium to use this command. Check My Profile for server invite link from where you can buy premium"
         )
     else:
         await inter.send(f"Something went wrong {error}")
+
+
+@bot.event
+async def on_command_error(ctx, err):
+    await on_slash_command_error(ctx, err)
 
 
 if __name__ == "__main__":
