@@ -141,8 +141,7 @@ def is_premium_user():
             return False
         uid = inter.author.id
         if member := server.get_member(uid):
-            member.get_role(PREMIUM_ROLE_ID)
-            if member:
+            if member.get_role(PREMIUM_ROLE_ID):
                 return True
         return False
 
