@@ -40,7 +40,7 @@ logging.getLogger("video_segmenter").setLevel(logging.DEBUG)
 logging.getLogger("disnake").setLevel(logging.INFO)
 
 queue = asyncio.Queue()
-PREMIUM_SERVER = bot.get_guild(1151244404137402388)
+PREMIUM_SERVER_ID = 1151244404137402388
 PREMIUM_ROLE_ID = 1151244654117920878
 
 
@@ -116,14 +116,14 @@ def is_guild_or_bot_owner():
 
 def is_premium_owner():
     def predicate(inter: disnake.GuildCommandInteraction) -> bool:
-        if not PREMIUM_SERVER or not PREMIUM_ROLE_ID:
+        server = bot.get_guild(PREMIUM_SERVER_ID)
+        if not server or not PREMIUM_ROLE_ID:
             return False
         uid = inter.author.id
         if inter.guild.owner_id != inter.author.id:
             return False
-        elif member := PREMIUM_SERVER.get_member(uid):
-            member.get_role(PREMIUM_ROLE_ID)
-            if member:
+        elif member := server.get_member(uid):
+            if member.get_role(PREMIUM_ROLE_ID):
                 return True
         return False
 
@@ -132,10 +132,11 @@ def is_premium_owner():
 
 def is_premium_user():
     def predicate(inter: disnake.CommandInteraction) -> bool:
-        if not PREMIUM_SERVER or not PREMIUM_ROLE_ID:
+        server = bot.get_guild(PREMIUM_SERVER_ID)
+        if not server or not PREMIUM_ROLE_ID:
             return False
         uid = inter.author.id
-        if member := PREMIUM_SERVER.get_member(uid):
+        if member := server.get_member(uid):
             member.get_role(PREMIUM_ROLE_ID)
             if member:
                 return True
