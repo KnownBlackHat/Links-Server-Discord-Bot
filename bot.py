@@ -44,6 +44,10 @@ PREMIUM_SERVER_ID = 1151244404137402388
 PREMIUM_ROLE_ID = 1151244654117920878
 
 
+class Premium_Owner(Exception):
+    """Raised when Premium User isn't the owner of the current server"""
+
+
 class Adownloader:
     def __init__(
         self, urls: Set, logger: logging.Logger = logging.getLogger(__name__)
@@ -117,13 +121,13 @@ def is_guild_or_bot_owner():
 def is_premium_owner():
     def predicate(inter: disnake.GuildCommandInteraction) -> bool:
         server = bot.get_guild(PREMIUM_SERVER_ID)
-        if not server or not PREMIUM_ROLE_ID:
-            return False
         uid = inter.author.id
-        if inter.guild.owner_id != inter.author.id:
+        if not server or not PREMIUM_ROLE_ID:
             return False
         elif member := server.get_member(uid):
             if member.get_role(PREMIUM_ROLE_ID):
+                if inter.guild.owner_id != inter.author.id:
+                    raise Premium_Owner
                 return True
         return False
 
@@ -582,6 +586,10 @@ async def on_slash_command_error(inter: disnake.CommandInteraction, error):
         await inter.send("Command Not Found")
     elif isinstance(error, commands.errors.MissingRole):
         await inter.send("You don't have the required role to run this command")
+    elif isinstance(error, Premium_Owner):
+        await inter.send(
+            "This Command is for server owners only. Kindly, create your server and add me there to use this command"
+        )
     elif isinstance(error, commands.errors.CheckFailure):
         await inter.send(
             "Buy Premium to use this command. Check My Profile for server invite link from where you can buy premium"
