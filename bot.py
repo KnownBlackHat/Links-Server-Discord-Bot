@@ -40,8 +40,8 @@ logging.getLogger("video_segmenter").setLevel(logging.DEBUG)
 logging.getLogger("disnake").setLevel(logging.INFO)
 
 queue = asyncio.Queue()
-PREMIUM_SERVER = bot.get_guild(123456789)
-PREMIUM_ROLE_ID = 1234567890
+PREMIUM_SERVER = bot.get_guild(1151244404137402388)
+PREMIUM_ROLE_ID = 1151244654117920878
 
 
 class Adownloader:
