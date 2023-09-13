@@ -280,7 +280,10 @@ async def serv(
     if isinstance(attachment, Path):
         url_buff = attachment.read_text()
     else:
-        await inter.send("Provided Links will be uploaded soon", ephemeral=True)
+        await inter.send(
+            f"Your upload is being queued, Upload will be completed soon!",
+            ephemeral=True,
+        )
         url_buff = (await attachment.read()).decode("utf-8")
     url_list = url_buff.split("\n")
     url_set = {x for x in url_list if x}
@@ -317,10 +320,10 @@ async def serv(
     url_list = list(url_set)
     url_grp = [url_list[i : i + 100] for i in range(0, len(url_list), 100)]
     logger.debug(f"Url Group {len(url_grp)=}")
-    for url in url_grp:
+    for idx, url in enumerate(url_grp, 1):
         url = set(url)
 
-        async def _dwnld(urls):
+        async def _dwnld(urls: Set, final: bool = False):
             downloader = Adownloader(urls=urls)
             destination = await downloader.download()
 
@@ -343,11 +346,12 @@ async def serv(
                     return
                 logger.info("Upload Complete")
                 if not isinstance(attachment, Path):
-                    await inter.channel.send(
-                        f"{inter.author.mention} Upload Completed",
-                        allowed_mentions=disnake.AllowedMentions(),
-                        delete_after=5,
-                    )
+                    if final:
+                        await inter.channel.send(
+                            f"{inter.author.mention} Upload Completed",
+                            allowed_mentions=disnake.AllowedMentions(),
+                            delete_after=5,
+                        )
 
             if sequential_upload:
                 logger.info("Doing Sequential Upload")
@@ -356,7 +360,10 @@ async def serv(
                 logger.info("Doing Concurrent Upload")
                 asyncio.create_task(_upload())
 
-        await queue.put((_dwnld, url))
+        if idx == len(url_grp):
+            await queue.put((_dwnld, url, True))
+        else:
+            await queue.put((_dwnld, url, False))
 
 
 @bot.slash_command(name="serve", dm_permission=False)
@@ -381,8 +388,8 @@ async def serve(
 async def run():
     if queue.empty():
         return
-    _f, parm = await queue.get()
-    await _f(parm)
+    _f, parm, final = await queue.get()
+    await _f(parm, final)
     queue.task_done()
 
 
