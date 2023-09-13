@@ -344,7 +344,8 @@ async def serv(
                     )
                     logger.error(f"Upload Failed {e}")
                     return
-                logger.info("Upload Complete")
+                logger.info(f"Upload Sequence {idx} Completed")
+                logger.info("Upload Completed") if final else None
                 if not isinstance(attachment, Path):
                     if final:
                         await inter.channel.send(
