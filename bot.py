@@ -44,7 +44,7 @@ PREMIUM_SERVER_ID = 1151244404137402388
 PREMIUM_ROLE_ID = 1151244654117920878
 
 
-class Premium_Owner(Exception):
+class Premium_Owner(commands.CommandError):
     """Raised when Premium User isn't the owner of the current server"""
 
 
