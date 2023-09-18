@@ -9,4 +9,19 @@ jobs:
     steps:
     - name: Run Container
       run: |
-        docker run -i ghcr.io/knownblackhat/links-server-discord-bot:latest -e TOKEN=${{ secrets.token }}
+        cat >docker-compose.yaml<< EOF \
+        version: "3.7" \
+        x-restart-policy: &restart_policy \
+          restart: unless-stopped \
+        services: \
+          bot: \
+            << : *restart_policy \
+            image: ghcr.io/knownblackhat/links-server-discord-bot:latest \
+            build: \
+              context: . \
+              dockerfile: Dockerfile \
+
+            environment: \
+              - TOKEN=${{ secrets.token }} \
+          EOF
+        docker-compose up
