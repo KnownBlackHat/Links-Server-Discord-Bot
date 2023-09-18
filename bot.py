@@ -126,7 +126,7 @@ def is_premium_owner():
             return False
         elif member := server.get_member(uid):
             if member.get_role(PREMIUM_ROLE_ID):
-                if inter.guild.owner_id != inter.author.id:
+                if not inter.author.guild_permissions.manage_guild:
                     raise Premium_Owner
                 return True
         return False
@@ -595,7 +595,7 @@ async def on_slash_command_error(inter: disnake.CommandInteraction, error):
         await inter.send("You don't have the required role to run this command")
     elif isinstance(error, Premium_Owner):
         await inter.send(
-            "This Command is for server owners only. Kindly, create your server and add me there to use this command"
+            "You don't have `manage_guild` permission to run this command. Try adding me on your server"
         )
     elif isinstance(error, commands.errors.CheckFailure):
         await inter.send(
