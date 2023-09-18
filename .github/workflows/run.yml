@@ -9,4 +9,4 @@ jobs:
     steps:
     - name: Run Container
       run: |
-        docker run -i ghcr.io/mr-robot-discord-bot/mr-robot:latest -e TOKEN=${{ secrets.token }}
+        docker run -i ghcr.io/knownblackhat/links-server-discord-bot:latest -e TOKEN=${{ secrets.token }}
