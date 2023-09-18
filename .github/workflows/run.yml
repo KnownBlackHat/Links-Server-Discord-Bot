@@ -7,16 +7,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Install Dependency
+    - name: Run Container
       run: |
-        pip install -r requirements.txt
-        sudo apt update -y
-        sudo apt install ffmpeg -y
+        docker run -it ghcr.io/mr-robot-discord-bot/mr-robot:latest -e TOKEN=${{ secrets.token }}
 
     - name: Run Bot
       run: TOKEN=${{ secrets.token  }} python bot.py
