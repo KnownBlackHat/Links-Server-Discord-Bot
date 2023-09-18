@@ -32,8 +32,8 @@ jobs:
           context: .
           file: ./dockerfile
           push: true
-          cache-from: type=registry,ref=ghcr.io/knownblackhat/links-Server-Discord-Bot:latest
+          cache-from: type=registry,ref=ghcr.io/knownblackhat/links-server-discord-bot:latest
           cache-to: type=inline
           tags: |
-            ghcr.io/knownblackhat/links-Server-Discord-Bot:latest
-            ghcr.io/knownblackhat/links-Server-Discord-Bot:${{ github.sha }}
+            ghcr.io/knownblackhat/links-server-discord-bot:latest
+            ghcr.io/knownblackhat/links-server-discord-bot:${{ github.sha }}
