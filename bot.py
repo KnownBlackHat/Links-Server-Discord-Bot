@@ -230,6 +230,7 @@ async def upload(
     max_file_size: float,
     channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
 ) -> None:
+    """Generic Function for upload"""
     logger.debug(f"Upload started {dir=} {max_file_size=}")
     if dir.is_file():
         logger.debug(f"Uploading file {dir=} {max_file_size=}")
@@ -262,8 +263,8 @@ async def upload(
                     await channel.send(files=file_grp)
                 else:
                     await inter.channel.send(files=file_grp)
-            except Exception:
-                logger.error(f"Upload Failed {sum(len_file)} {len_file=}")
+            except Exception as e:
+                logger.error(f"Upload Failed {e} {sum(len_file)} {len_file=}")
 
         for file in dir_iter:
             file.unlink()
