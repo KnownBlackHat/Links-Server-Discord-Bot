@@ -338,11 +338,6 @@ async def serv(
                         channel=channel,
                     )
                 except Exception as e:
-                    await inter.send(
-                        file=disnake.File(
-                            io.BytesIO(str(e).encode("utf-8")), filename="exception.txt"
-                        )
-                    )
                     logger.error(f"Upload Failed {e}")
                     return
                 logger.info(f"Upload Sequence {idx} Completed")
