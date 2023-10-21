@@ -72,18 +72,20 @@ class Adownloader:
                 follow_redirects=True,
                 headers={"User-Agent": "Magic Browser"},
             ) as response:
-                # response.raise_for_status()
-                if response.status_code != 200:
-                    logger.critical(f"Server returned {response.status_code} for {url}")
                 async with aiofiles.open(
                     dir.joinpath(str(uuid4()) + "." + self._get_file_ext_from_url(url)),
                     mode="wb",
                 ) as file:
                     async for chunk in response.aiter_bytes():
                         await file.write(chunk)
+                if response.status_code != 200:
+                    logger.critical(f"Server returned {response.status_code} for {url}")
+                    Path(
+                        dir.joinpath(
+                            str(uuid4()) + "." + self._get_file_ext_from_url(url)
+                        )
+                    ).unlink()
             self._downloaded.add(url)
-        # except httpx.HTTPStatusError as e:
-
         except Exception:
             logger.exception(f"Error while downloading {url}")
 
