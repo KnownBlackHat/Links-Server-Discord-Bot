@@ -82,6 +82,10 @@ class Adownloader:
             self._downloaded.add(url)
         except httpx.HTTPStatusError as e:
             logger.critical(f"Server returned {e.response.status_code} for {url}")
+            Path(
+                dir.joinpath(str(uuid4()) + "." + self._get_file_ext_from_url(url))
+            ).unlink()
+
         except Exception:
             logger.exception(f"Error while downloading {url}")
 
