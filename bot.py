@@ -75,11 +75,6 @@ class Adownloader:
                 # response.raise_for_status()
                 if response.status_code != 200:
                     logger.critical(f"Server returned {response.status_code} for {url}")
-                    Path(
-                        dir.joinpath(
-                            str(uuid4()) + "." + self._get_file_ext_from_url(url)
-                        )
-                    ).unlink()
                 async with aiofiles.open(
                     dir.joinpath(str(uuid4()) + "." + self._get_file_ext_from_url(url)),
                     mode="wb",
