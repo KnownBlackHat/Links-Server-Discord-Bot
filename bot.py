@@ -518,7 +518,7 @@ async def shrink(
     ctx: commands.GuildContext,
     link: str,
     text: Optional[str] = None,
-    media: Optional[disnake.Attachment] = None,
+    media: Optional[disnake.Attachment | str] = None,
 ):
     async with httpx.AsyncClient() as client:
         API_KEY = "5d7be8b0f901254621a61caefd3d2fd182a1cf07"
@@ -537,7 +537,7 @@ async def shrink(
             color=disnake.Color.random(),
         )
         if media:
-            emb.set_image(media.url)
+            emb.set_image(media.url if isinstance(media, disnake.Attachment) else media)
         await ctx.send(embed=emb)
 
 
