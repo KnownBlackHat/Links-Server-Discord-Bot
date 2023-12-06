@@ -515,7 +515,7 @@ async def cmd(ctx: commands.GuildContext, *, args):
 
 @bot.slash_command(name="shrink")
 async def shrink(
-    ctx: commands.GuildContext,
+    ctx: disnake.CommandInteraction,
     link: str,
     text: Optional[str] = None,
     media: Optional[disnake.Attachment | str] = None,
