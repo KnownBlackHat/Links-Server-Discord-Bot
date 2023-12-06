@@ -513,6 +513,34 @@ async def cmd(ctx: commands.GuildContext, *, args):
     await ctx.send(file=disnake.File(io.BytesIO(await out.stdout.read()), filename="cmd.txt"))  # type: ignore
 
 
+@bot.slash_command(name="shrink")
+async def shrink(
+    ctx: commands.GuildContext,
+    link: str,
+    text: Optional[str] = None,
+    media: Optional[disnake.Attachment] = None,
+):
+    async with httpx.AsyncClient() as client:
+        API_KEY = "5d7be8b0f901254621a61caefd3d2fd182a1cf07"
+        URL = f"https://shrinkme.io/api?api={API_KEY}&url={link}"
+        resp = await client.get(URL)
+        data = await resp.json()
+        if data["status"] == "success":
+            srtlink = data["shortenedUrl"]
+        elif data["status"] == "error":
+            raise AttributeError("Invalid Url Passed")
+        else:
+            raise Exception("Api didn't reponded")
+        emb = disnake.Embed(
+            title=text,
+            description=f"Content Link: {srtlink}",
+            color=disnake.Color.random(),
+        )
+        if media:
+            emb.set_image(media.url)
+        await ctx.send(embed=emb)
+
+
 @bot.slash_command(name="clone")
 @is_premium_owner()
 async def clone(inter: disnake.GuildCommandInteraction):
