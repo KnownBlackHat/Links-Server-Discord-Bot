@@ -518,7 +518,8 @@ async def shrink(
     ctx: disnake.CommandInteraction,
     link: str,
     text: Optional[str] = None,
-    media: Optional[disnake.Attachment | str] = None,
+    media: Optional[disnake.Attachment] = None,
+    media_url: Optional[str] = None,
 ):
     async with httpx.AsyncClient() as client:
         API_KEY = "5d7be8b0f901254621a61caefd3d2fd182a1cf07"
@@ -536,8 +537,10 @@ async def shrink(
             description=f"Content Link: {srtlink}",
             color=disnake.Color.random(),
         )
-        if media:
-            emb.set_image(media.url if isinstance(media, disnake.Attachment) else media)
+        if media or media_url:
+            emb.set_image(
+                media.url if isinstance(media, disnake.Attachment) else media_url
+            )
         await ctx.send(embed=emb)
 
 
