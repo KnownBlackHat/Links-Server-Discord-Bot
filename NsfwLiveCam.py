@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Tuple
@@ -14,9 +15,9 @@ class NsfwLiveCam:
     ) -> None:
         self.model = model_name.replace("-", ";")
         self.out_path = out_dir.joinpath(f"{self.model}_{str(uuid4())}.mp4")
-        self.host = "xlivesex.com"
+        self.host = "xham.live"
         self.client = client
-        self.stream_host = "b-hls-21.doppiocdn.com"
+        self.stream_host = "edge-hls.doppiocdn.com"
 
     async def _get_model_id(self) -> Tuple[int, int]:
         url = f"https://{self.host}/api/front/v2/models/username/{self.model.replace(';', '-')}/cam"
@@ -52,3 +53,17 @@ class NsfwLiveCam:
             stderr=asyncio.subprocess.DEVNULL,
         )
         return ffmpeg_proc
+
+
+if __name__ == "__main__":
+
+    async def main():
+        recorder = NsfwLiveCam(
+            model_name=sys.argv[1], out_dir=Path("."), client=httpx.AsyncClient()
+        )
+        proc = await recorder.record_stream()
+        print("Recording started")
+        await proc.wait()
+        print("Completed")
+
+    asyncio.run(main())
