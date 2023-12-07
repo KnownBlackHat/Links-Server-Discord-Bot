@@ -17,7 +17,7 @@ class NsfwLiveCam:
         self.out_path = out_dir.joinpath(f"{self.model}_{str(uuid4())}.mp4")
         self.host = "xham.live"
         self.client = client
-        self.stream_host = "edge-hls.doppiocdn.com"
+        self.stream_host = "b-hls-21.doppiocdn.com"
 
     async def _get_model_id(self) -> Tuple[int, int]:
         url = f"https://{self.host}/api/front/v2/models/username/{self.model.replace(';', '-')}/cam"
