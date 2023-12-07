@@ -445,7 +445,6 @@ async def record(
             await recorder.get_thumbnail(),
             view=RecorderView(process, recorder, inter.author.id),
         )
-    await inter.channel.send(str(recorder.out_path))
     await process.wait()
     await inter.channel.send(
         f"Stream Duration: {(time.perf_counter() - start)/60:.2f}", delete_after=5
