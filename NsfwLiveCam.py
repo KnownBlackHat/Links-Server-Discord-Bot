@@ -15,7 +15,7 @@ class NsfwLiveCam:
     ) -> None:
         self.model = model_name.replace("-", ";")
         self.out_path = out_dir.joinpath(f"{self.model}_{str(uuid4())}.mp4")
-        self.host = "xham.live"
+        self.host = "stripchat.com"
         self.client = client
         self.stream_host = "b-hls-21.doppiocdn.com"
 
