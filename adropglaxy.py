@@ -8,6 +8,12 @@ import httpx
 from selectolax.parser import HTMLParser
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format="%(levelname)s: %(message)s",
+    level=logging.INFO,
+    handlers=[logging.NullHandler()],
+)
+logger = logging.getLogger(__name__)
 
 
 class DropGalaxy:
@@ -16,7 +22,7 @@ class DropGalaxy:
         self.client = client
 
     async def _get_token(self, id: str) -> str:
-        token = f"[hostname=dropgalaxy.co][id={id}]"
+        token = f"[LODA-LELO][hostname=dropgalaxy.com][id={id}][adb=0][frminfo=][offset=300][scr=https://script.4dex.io/localstore.js]"
         msg = [ord(x) for x in token]
         msg = str(msg).replace("[", "").replace("]", "")
         msg = msg.replace("2", "004").replace("3", "005").replace("7", "007")
@@ -32,7 +38,9 @@ class DropGalaxy:
         data = {"rand": "", "msg": msg}
 
         resp = await self.client.post(
-            "https://tmp.isavetube.com/gettoken.php", data=data, headers=headers
+            "https://tmp.isavetube.com/gettoken.php?u=div-gpt-ad-dropgalaxycom&v=script2.src",
+            data=data,
+            headers=headers,
         )
         return resp.text
 
@@ -47,7 +55,8 @@ class DropGalaxy:
         try:
             zip_url = html.css_first("#dllink").attributes.get("action")
         except AttributeError:
-            logger.critical(f"{resp.status_code} Unable to get zip url {data=!r}")
+            logger.critical(f"Unable to get zip url {data=!r}")
+            print(f"{data=!r}")
             return None
         else:
             return zip_url
@@ -68,9 +77,7 @@ async def main() -> None:
     except IndexError:
         print(f"{sys.argv[0]} [link]")
         exit()
-    async with httpx.AsyncClient(
-        limits=httpx.Limits(max_connections=5), timeout=httpx.Timeout(None)
-    ) as client:
+    async with httpx.AsyncClient() as client:
         resolver = DropGalaxy(client)
         links = await resolver(set(urls))
         for link in links:
