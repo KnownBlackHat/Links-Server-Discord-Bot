@@ -41,7 +41,7 @@ logging.getLogger("disnake").setLevel(logging.INFO)
 
 queue = asyncio.Queue()
 PREMIUM_SERVER_ID = 1163729670961901568
-PREMIUM_ROLE_ID = 1163737719390863370
+PREMIUM_ROLE_ID = 1190317703525826570
 
 
 class Premium_Owner(commands.CommandError):
