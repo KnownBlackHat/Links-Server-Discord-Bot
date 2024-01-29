@@ -30,7 +30,6 @@ console_handler = logging.StreamHandler()
 file_handler.setLevel(logging.DEBUG)
 console_handler.setLevel(logging.INFO)
 logging.basicConfig(
-    level=logging.NOTSET,
     format="%(levelname)s - %(name)s - %(filename)s - %(module)s - %(funcName)s - %(message)s",
     handlers=[console_handler, file_handler],
 )
@@ -136,7 +135,7 @@ class Adownloader:
         ffmpeg_proc = await asyncio.create_subprocess_exec(
             "ffmpeg",
             *ffmpeg.input(**input_options)
-            .output(str(uuid4()), **output_options)
+            .output(dir.joinpath(str(uuid4()) + ".mp4"), **output_options)
             .get_args(),
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
