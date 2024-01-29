@@ -88,6 +88,28 @@ class Adownloader:
         except Exception:
             logger.exception(f"Error while downloading {url}")
 
+    async def download_m3u8(self, url: str, dir: Path) -> None:
+        logger.info(f'{dir.joinpath(str(uuid4()) + ".mp4").name=} {dir=} {url=}')
+        input_options = {
+            "filename": url,
+        }
+
+        output_options = {
+            "c:v": "copy",
+            "c:a": "copy",
+            "f": "mp4",
+        }
+
+        ffmpeg_proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            *ffmpeg.input(**input_options)
+            .output(dir.joinpath(str(uuid4()) + ".mp4").name, **output_options)
+            .get_args(),
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await ffmpeg_proc.wait()
+
     async def download(self) -> Path:
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(None), limits=httpx.Limits(max_connections=5)
@@ -118,29 +140,6 @@ class Adownloader:
             if len(not_downloaded):
                 logger.info(f"Failed To Download {not_downloaded}")
         return dir
-
-    async def download_m3u8(self, url: str, dir: Path) -> None:
-        logger.info(f'{dir.joinpath(str(uuid4()) + ".mp4").name=} {dir=} {url=}')
-        print(f'print func {dir.joinpath(str(uuid4()) + ".mp4").name=} {dir=} {url=}')
-        input_options = {
-            "filename": url,
-        }
-
-        output_options = {
-            "c:v": "copy",
-            "c:a": "copy",
-            "f": "mp4",
-        }
-
-        ffmpeg_proc = await asyncio.create_subprocess_exec(
-            "ffmpeg",
-            *ffmpeg.input(**input_options)
-            .output(dir.joinpath(str(uuid4()) + ".mp4").name, **output_options)
-            .get_args(),
-            # stdout=asyncio.subprocess.DEVNULL,
-            # stderr=asyncio.subprocess.DEVNULL,
-        )
-        await ffmpeg_proc.wait()
 
 
 def is_guild_or_bot_owner():

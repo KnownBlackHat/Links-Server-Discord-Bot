@@ -7,13 +7,7 @@ from typing import Set
 import httpx
 from selectolax.parser import HTMLParser
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    format="%(levelname)s: %(message)s",
-    level=logging.INFO,
-    handlers=[logging.NullHandler()],
-)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 class DropGalaxy:
