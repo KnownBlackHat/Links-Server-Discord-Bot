@@ -128,17 +128,15 @@ class Adownloader:
             "c:v": "copy",
             "c:a": "copy",
             "f": "mp4",
-            "preset": "ultrafast",
-            "bsf:a": "aac_adtstoasc",
         }
 
         ffmpeg_proc = await asyncio.create_subprocess_exec(
             "ffmpeg",
             *ffmpeg.input(**input_options)
-            .output(dir.joinpath(str(uuid4()) + ".mp4"), **output_options)
+            .output(dir.joinpath(str(uuid4()) + ".mp4").name, **output_options)
             .get_args(),
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
+            # stdout=asyncio.subprocess.DEVNULL,
+            # stderr=asyncio.subprocess.DEVNULL,
         )
         await ffmpeg_proc.wait()
 
