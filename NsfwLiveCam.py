@@ -49,8 +49,8 @@ class NsfwLiveCam:
             *ffmpeg.input(**input_options)
             .output(self.out_path.name, **output_options)
             .get_args(),
-            # stdout=asyncio.subprocess.DEVNULL,
-            # stderr=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         return ffmpeg_proc
 
@@ -62,8 +62,6 @@ if __name__ == "__main__":
             model_name=sys.argv[1], out_dir=Path("."), client=httpx.AsyncClient()
         )
         proc = await recorder.record_stream()
-        print("Recording started")
         await proc.wait()
-        print("Completed")
 
     asyncio.run(main())

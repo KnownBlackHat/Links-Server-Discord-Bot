@@ -13,6 +13,7 @@ from zipfile import BadZipfile, ZipFile
 
 import aiofiles
 import disnake
+import ffmpeg
 import httpx
 from disnake.ext import commands, tasks
 
@@ -94,13 +95,23 @@ class Adownloader:
         ) as client:
             dir = Path(str(uuid4()))
             dir.mkdir()
-            tasks = (
-                self._httpx_download(url=url, dir=dir, client=client)
-                for url in self.urls
-            )
+            m3u8_links = {
+                url for url in self.urls if urlparse(url).path.endswith(".m3u8")
+            }
+            httpx_links = self.urls - m3u8_links
             timer_start = time.perf_counter()
             logger.info(f"Downloading {len(self.urls)} Items")
-            await asyncio.gather(*tasks)
+            if httpx_links:
+                task1 = (
+                    self._httpx_download(url=url, dir=dir, client=client)
+                    for url in httpx_links
+                )
+                await asyncio.gather(*task1)
+
+            if m3u8_links:
+                task2 = (self.download_m3u8(url, dir) for url in m3u8_links)
+                await asyncio.gather(*task2)
+
             self.logger.info(
                 f"{len(self.urls)} items downloaded within {time.perf_counter() - timer_start:.2f}"
             )
@@ -108,6 +119,29 @@ class Adownloader:
             if len(not_downloaded):
                 logger.info(f"Failed To Download {not_downloaded}")
         return dir
+
+    async def download_m3u8(self, url: str, dir: Path) -> None:
+        input_options = {
+            "filename": url,
+        }
+
+        output_options = {
+            "c:v": "copy",
+            "c:a": "copy",
+            "f": "mp4",
+            "preset": "ultrafast",
+            "bsf:a": "aac_adtstoasc",
+        }
+
+        ffmpeg_proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            *ffmpeg.input(**input_options)
+            .output(str(uuid4()), **output_options)
+            .get_args(),
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await ffmpeg_proc.wait()
 
 
 def is_guild_or_bot_owner():
@@ -317,13 +351,13 @@ async def serv(
         ) as client:
             extractor = TeraExtractor(tera_set, "Magic Browser", client)
             data = await extractor()
-            logger.debug(f"Resolved TeraBox Links {len(data)=}")
+            logger.info(f"Resolved TeraBox Links {len(data)=}")
             logger.critical(f"{len(extractor.failed)} TeraLinks Failed To Sign")
             url_set.update({url.resolved_link for url in data})
 
     url_list = list(url_set)
     url_grp = [url_list[i : i + 100] for i in range(0, len(url_list), 100)]
-    logger.debug(f"Url Group {len(url_grp)=}")
+    logger.info(f"Url Group {len(url_grp)=}")
     for idx, url in enumerate(url_grp, 1):
         url = set(url)
 
