@@ -30,6 +30,7 @@ console_handler = logging.StreamHandler()
 file_handler.setLevel(logging.DEBUG)
 console_handler.setLevel(logging.INFO)
 logging.basicConfig(
+    level=logging.NOTSET,
     format="%(levelname)s - %(name)s - %(filename)s - %(module)s - %(funcName)s - %(message)s",
     handlers=[console_handler, file_handler],
 )
@@ -89,7 +90,7 @@ class Adownloader:
             logger.exception(f"Error while downloading {url}")
 
     async def download_m3u8(self, url: str, dir: Path) -> None:
-        logger.info(f'{dir.joinpath(str(uuid4()) + ".mp4").name=} {dir=} {url=}')
+        logger.debug(f"{dir=} {url=}")
         input_options = {
             "filename": url,
         }
@@ -100,15 +101,19 @@ class Adownloader:
             "f": "mp4",
         }
 
-        ffmpeg_proc = await asyncio.create_subprocess_exec(
-            "ffmpeg",
-            *ffmpeg.input(**input_options)
-            .output(dir.joinpath(str(uuid4()) + ".mp4").name, **output_options)
-            .get_args(),
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        await ffmpeg_proc.wait()
+        try:
+            ffmpeg_proc = await asyncio.create_subprocess_exec(
+                "ffmpeg",
+                *ffmpeg.input(**input_options)
+                .output(str(dir.joinpath(str(uuid4()) + ".mp4")), **output_options)
+                .get_args(),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await ffmpeg_proc.wait()
+            self._downloaded.add(url)
+        except Exception:
+            logger.exception(f"Error while downloading {url}")
 
     async def download(self) -> Path:
         async with httpx.AsyncClient(
@@ -121,8 +126,8 @@ class Adownloader:
             }
             httpx_links = self.urls - m3u8_links
             timer_start = time.perf_counter()
-            logger.info(f"Downloading {len(self.urls)} Items")
             if httpx_links:
+                logger.info(f"Downloading {len(httpx_links)} files")
                 task1 = (
                     self._httpx_download(url=url, dir=dir, client=client)
                     for url in httpx_links
@@ -130,6 +135,7 @@ class Adownloader:
                 await asyncio.gather(*task1)
 
             if m3u8_links:
+                logger.info(f"Downloading {len(m3u8_links)} m3u8 files")
                 task2 = (self.download_m3u8(url, dir) for url in m3u8_links)
                 await asyncio.gather(*task2)
 
