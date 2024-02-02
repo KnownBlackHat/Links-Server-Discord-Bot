@@ -15,9 +15,9 @@ class NsfwLiveCam:
     ) -> None:
         self.model = model_name.replace("-", ";")
         self.out_path = out_dir.joinpath(f"{self.model}_{str(uuid4())}.mp4")
-        self.host = "stripchat.com"
+        self.host = "xham.live"
         self.client = client
-        self.stream_host = "b-hls-21.doppiocdn.com"
+        self.stream_host = "b-hls-05.doppiocdn.org"
 
     async def _get_model_id(self) -> Tuple[int, int]:
         url = f"https://{self.host}/api/front/v2/models/username/{self.model.replace(';', '-')}/cam"
@@ -58,10 +58,12 @@ class NsfwLiveCam:
 if __name__ == "__main__":
 
     async def main():
+        print("recording")
         recorder = NsfwLiveCam(
             model_name=sys.argv[1], out_dir=Path("."), client=httpx.AsyncClient()
         )
         proc = await recorder.record_stream()
         await proc.wait()
+        print("recording stoped")
 
     asyncio.run(main())
