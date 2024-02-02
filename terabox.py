@@ -48,6 +48,7 @@ class TeraExtractor:
 
     async def _get_id_loc(self, url: str) -> str:
         resp = await self.client.get(url)
+        print(resp.headers.get("location"))
         return resp.headers.get("location")
 
     async def _sign(self, id: str) -> TeraData:
@@ -161,13 +162,10 @@ class TeraExtractor:
                 logger.error(f"Got {e.response.status_code}")
                 return
 
-        if resp.status_code == 200:
-            if resp.json().get("isdir") == "1":
-                logger.error("Provide link stored directory")
-                return
-            return self.TeraLink(id=id, resolved_link=resp.json().get("dlink"))
-        else:
-            raise httpx.HTTPError(resp.json())
+        if resp.json().get("isdir") == "1":
+            logger.error("Provide link stored directory")
+            return
+        return self.TeraLink(id=id, resolved_link=resp.json().get("dlink"))
 
     async def __call__(self, urls: Optional[Set] = None) -> List[TeraLink]:
         if not urls:
