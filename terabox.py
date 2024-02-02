@@ -48,7 +48,6 @@ class TeraExtractor:
 
     async def _get_id_loc(self, url: str) -> str:
         resp = await self.client.get(url)
-        print(resp.headers.get("location"))
         return resp.headers.get("location")
 
     async def _sign(self, id: str) -> TeraData:
@@ -159,11 +158,13 @@ class TeraExtractor:
                 await self._get_download_url_v2(url)
                 return
             else:
+                self.failed.add(id)
                 logger.error(f"Got {e.response.status_code}")
                 return
 
         if resp.json().get("isdir") == "1":
             logger.error("Provide link stored directory")
+            self.failed.add(id)
             return
         return self.TeraLink(id=id, resolved_link=resp.json().get("dlink"))
 
