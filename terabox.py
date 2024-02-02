@@ -158,7 +158,8 @@ class TeraExtractor:
                 await self._get_download_url_v2(url)
                 return
             else:
-                raise
+                logger.error(f"Got {e.response.status_code}")
+                return
 
         if resp.status_code == 200:
             if resp.json().get("isdir") == "1":
