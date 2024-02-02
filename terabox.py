@@ -135,6 +135,31 @@ class TeraExtractor:
                 logger.warning(f"Retrying to get download url for {id=}")
                 await self._get_download_url(id)
 
+    async def _get_download_url_v2(self, url: str) -> Optional[TeraLink]:
+        await asyncio.sleep(0.2)
+        try:
+            resp = await self.client.get(
+                f"https://terabox-test1.vercel.app/api?data={url}"
+            )
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                retry_after = int(e.response.headers.get("Retry-After", 60))
+                logger.warning(f"Rate Limited, Sleeping for {retry_after}")
+                await asyncio.sleep(retry_after)
+                await self._get_download_url_v2(url)
+                return
+            else:
+                raise
+
+        if resp.status_code == 200:
+            if resp.json().get("isdir") == "1":
+                logger.error("Provide link stored directory")
+                return
+            return self.TeraLink(id=url, resolved_link=resp.json().get("dlink"))
+        else:
+            raise httpx.HTTPError(resp.json())
+
     async def __call__(self, urls: Optional[Set] = None) -> List[TeraLink]:
         if not urls:
             urls = self.urls
