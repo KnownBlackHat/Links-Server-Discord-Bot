@@ -146,7 +146,6 @@ class TeraExtractor:
             resp = await self.client.get(
                 f"https://terabox-test1.vercel.app/api?data=https://www.terabox.app/sharing/link?surl={id}"
             )
-            resp.raise_for_status()
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
                 retry_after = int(e.response.headers.get("Retry-After", 60))
