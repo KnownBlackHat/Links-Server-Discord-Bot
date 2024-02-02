@@ -164,7 +164,7 @@ class TeraExtractor:
         if not urls:
             urls = self.urls
         self.retry = set()
-        tasks = (self._get_download_url(id) for id in urls if id)
+        tasks = (self._get_download_url_v2(id) for id in urls if id)
         data = await asyncio.gather(*tasks)
         if self.retry:
             logger.warning(f"Retrying {len(self.retry)=}")
