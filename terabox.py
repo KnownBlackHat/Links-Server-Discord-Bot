@@ -177,7 +177,7 @@ class TeraExtractor:
         if self.retry:
             logger.warning(f"Retrying {len(self.retry)=}")
             await self.__call__(self.retry)
-        data = [x for x in data if x]
+        data = [x for x in data if x.resolved_link]
         logger.info(f"Resolved {len(data)} TeraLinks")
         return data
 
