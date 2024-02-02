@@ -46,6 +46,10 @@ class TeraExtractor:
     def _get_id(self, url: str) -> str:
         return url.split("/")[-1]
 
+    async def _get_id_loc(self, url: str) -> str:
+        resp = await self.client.get(url)
+        return resp.headers.get("location")
+
     async def _sign(self, id: str) -> TeraData:
         url = f"https://terabox-dl.qtcloud.workers.dev/api/get-info?shorturl={id}"
         headers = {
@@ -138,13 +142,13 @@ class TeraExtractor:
     async def _get_download_url_v2(self, url: str) -> Optional[TeraLink]:
         await asyncio.sleep(0.2)
         if url.startswith("http"):
-            id = self._get_id(url)
+            id = await self._get_id_loc(url)
         else:
             id = url
 
         try:
             resp = await self.client.get(
-                f"https://terabox-test1.vercel.app/api?data=https://www.terabox.app/sharing/link?surl={id}"
+                f"https://terabox-test1.vercel.app/api?data={id}"
             )
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
@@ -190,7 +194,7 @@ if __name__ == "__main__":
 
         client = httpx.AsyncClient(
             timeout=httpx.Timeout(None),
-            follow_redirects=True,
+            follow_redirects=False,
             limits=httpx.Limits(max_connections=10),
         )
         extractor = TeraExtractor(urls, "Magic Browser", client)
