@@ -137,9 +137,14 @@ class TeraExtractor:
 
     async def _get_download_url_v2(self, url: str) -> Optional[TeraLink]:
         await asyncio.sleep(0.2)
+        if url.startswith("http"):
+            id = self._get_id(url)
+        else:
+            id = url
+
         try:
             resp = await self.client.get(
-                f"https://terabox-test1.vercel.app/api?data={url}"
+                f"https://terabox-test1.vercel.app/api?data=https://www.terabox.app/sharing/link?surl={id}"
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as e:
@@ -156,7 +161,7 @@ class TeraExtractor:
             if resp.json().get("isdir") == "1":
                 logger.error("Provide link stored directory")
                 return
-            return self.TeraLink(id=url, resolved_link=resp.json().get("dlink"))
+            return self.TeraLink(id=id, resolved_link=resp.json().get("dlink"))
         else:
             raise httpx.HTTPError(resp.json())
 
