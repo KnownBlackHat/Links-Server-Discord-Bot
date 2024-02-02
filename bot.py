@@ -350,7 +350,7 @@ async def serv(
     if tera_set:
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(None, read=None),
-            follow_redirects=False,
+            follow_redirects=True,
             limits=httpx.Limits(max_connections=10),
         ) as client:
             extractor = TeraExtractor(tera_set, "Magic Browser", client)

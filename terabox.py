@@ -47,7 +47,7 @@ class TeraExtractor:
         return url.split("/")[-1]
 
     async def _get_id_loc(self, url: str) -> str:
-        resp = await self.client.get(url)
+        resp = await self.client.get(url, follow_redirects=False)
         return resp.headers.get("location")
 
     async def _sign(self, id: str) -> TeraData:
@@ -150,6 +150,7 @@ class TeraExtractor:
             resp = await self.client.get(
                 f"https://terabox-test1.vercel.app/api?data={id}"
             )
+            resp.raise_for_status()
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
                 retry_after = int(e.response.headers.get("Retry-After", 60))
@@ -159,7 +160,7 @@ class TeraExtractor:
                 return
             else:
                 self.failed.add(id)
-                logger.error(f"Got {e.response.status_code}")
+                logger.error(f"Got {e.response.status_code} status code")
                 return
 
         if resp.json().get("isdir") == "1":
@@ -177,7 +178,7 @@ class TeraExtractor:
         if self.retry:
             logger.warning(f"Retrying {len(self.retry)=}")
             await self.__call__(self.retry)
-        data = [x for x in data if x.resolved_link]
+        data = [x for x in data if x and x.resolved_link]
         logger.info(f"Resolved {len(data)} TeraLinks")
         return data
 
@@ -194,7 +195,7 @@ if __name__ == "__main__":
 
         client = httpx.AsyncClient(
             timeout=httpx.Timeout(None),
-            follow_redirects=False,
+            follow_redirects=True,
             limits=httpx.Limits(max_connections=10),
         )
         extractor = TeraExtractor(urls, "Magic Browser", client)
