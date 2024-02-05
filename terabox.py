@@ -148,7 +148,10 @@ class TeraExtractor:
 
         try:
             resp = await self.client.get(
-                f"https://terabox-test1.vercel.app/api?data={id}"
+                f"https://terabox-test1.vercel.app/api?data={id}",
+                headers={
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0"
+                },
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as e:
@@ -173,7 +176,7 @@ class TeraExtractor:
         if not urls:
             urls = self.urls
         self.retry = set()
-        tasks = (self._get_download_url_v2(id) for id in urls if id)
+        tasks = (self._get_download_url(id) for id in urls if id)
         data = await asyncio.gather(*tasks)
         if self.retry:
             logger.warning(f"Retrying {len(self.retry)=}")
