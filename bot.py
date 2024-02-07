@@ -454,17 +454,19 @@ async def cmd(ctx: commands.GuildContext, *, args):
     await ctx.send(file=disnake.File(io.BytesIO(await out.stdout.read()), filename="cmd.txt"))  # type: ignore
 
 
-@bot.slash_command(name="shrink")
-async def shrink(
+@bot.slash_command(name="url_shortner")
+async def shortner(
     ctx: disnake.CommandInteraction,
     link: str,
     text: Optional[str] = None,
     media: Optional[disnake.Attachment] = None,
     media_url: Optional[str] = None,
 ):
+    """Shortens your url"""
+
     async with httpx.AsyncClient() as client:
-        API_KEY = "5d7be8b0f901254621a61caefd3d2fd182a1cf07"
-        URL = f"https://shrinkme.io/api?api={API_KEY}&url={link}"
+        API_KEY = "ea91b07202cf153c1caf18c52e8813afdbb2932f"
+        URL = f"https://urlshortx.com//api?api={API_KEY}&url={link}"
         resp = await client.get(URL)
         data = await resp.json()
         if data["status"] == "success":
