@@ -222,7 +222,7 @@ async def serv(
         url_buff = attachment.read_text()
     else:
         await inter.send(
-            f"Your upload is being queued, Upload will be completed soon!",
+            "Your upload is being queued, Upload will be completed soon!",
             ephemeral=True,
         )
         url_buff = (await attachment.read()).decode("utf-8")
@@ -284,7 +284,7 @@ async def serv(
                 except Exception as e:
                     logger.error(f"Upload Failed {e}")
                     return
-                logger.info(f"Upload Sequence {idx} Completed")
+                logger.info(f"Upload Sequence {idx}/{len(url_grp)} Completed")
                 logger.info("Upload Completed") if final else None
                 if not isinstance(attachment, Path):
                     if final:
