@@ -285,14 +285,21 @@ async def serv(
                     logger.error(f"Upload Failed {e}")
                     return
                 logger.info(f"Upload Sequence {idx}/{len(url_grp)} Completed")
-                logger.info("Upload Completed") if final else None
+                logger.info(
+                    f"Upload Completed {inter.guild_id} -> {inter.guild.name}"
+                ) if final else None
                 if not isinstance(attachment, Path):
                     if final:
-                        await inter.channel.send(
-                            f"{inter.author.mention} Upload Completed",
-                            allowed_mentions=disnake.AllowedMentions(),
-                            delete_after=5,
-                        )
+                        if not isinstance(inter.channel, disnake.PartialMessageable):
+                            await inter.author.send(
+                                f"{len(set(url_list))} Upload completed in {inter.channel.mention}",
+                                allowed_mentions=disnake.AllowedMentions(),
+                            )
+                        else:
+                            await inter.channel.send(
+                                f"{inter.author.mention} {len(set(url_list))} Upload completed",
+                                allowed_mentions=disnake.AllowedMentions(),
+                            )
 
             if sequential_upload:
                 logger.info("Doing Sequential Upload")
