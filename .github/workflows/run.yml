@@ -1,6 +1,9 @@
 name: Bot Runner
 
-on: [workflow_dispatch]
+on:
+  schedule:
+    - cron: '30 23 * * *'
+  workflow_dispatch:
 
 jobs:
   run:
