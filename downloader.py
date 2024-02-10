@@ -16,7 +16,7 @@ class Adownloader:
         self, urls: Set, logger: logging.Logger = logging.getLogger(__name__)
     ) -> None:
         self._downloaded = set()
-        self.urls = urls
+        self.urls = {x.strip() for x in urls}
         self.logger = logger
 
     def _get_file_ext_from_url(self, url: str) -> str:
@@ -28,7 +28,6 @@ class Adownloader:
     async def _httpx_download(
         self, url: str, dir: Path, client: httpx.AsyncClient
     ) -> None:
-        url = url.strip()
         try:
             async with client.stream(
                 "GET",
@@ -55,7 +54,6 @@ class Adownloader:
             self.logger.exception(f"Error while downloading {url}")
 
     async def download_m3u8(self, url: str, dir: Path) -> None:
-        url = url.strip()
         self.logger.debug(f"{dir=} {url=}")
         input_options = {
             "filename": url,
