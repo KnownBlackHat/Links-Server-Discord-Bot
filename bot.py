@@ -437,6 +437,15 @@ async def slash_record(inter: disnake.GuildCommandInteraction, model: str):
     await record(inter, model)
 
 
+@slash_record.autocomplete("model")
+async def models_suggestions(
+    inter: disnake.GuildCommandInteraction, name: str
+) -> Set | None:
+    return await NsfwLiveCam(
+        model_name="", out_dir=Path("."), client=httpx.AsyncClient()
+    ).get_suggestions(name)
+
+
 @bot.command(name="record", aliases=["r"])
 @is_premium_user()
 async def pre_record(ctx: commands.GuildContext, model: str):
