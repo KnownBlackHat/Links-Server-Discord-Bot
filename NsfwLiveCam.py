@@ -21,11 +21,16 @@ class NsfwLiveCam:
 
     async def get_suggestions(self, model: str):
         if not model:
-            return
-        url = f"https://{self.host}/api/front/v4/models/search/suggestion?query={model}&limit=20&primaryTag=girls"
-        resp = await self.client.get(url)
-        json = resp.json()
-        return {x.get("username") for x in json.get("models")}
+            return {}
+        elif len(model) >= 3:
+            url = f"https://{self.host}/api/front/v4/models/search/suggestion?query={model}&limit=20&primaryTag=girls"
+            resp = await self.client.get(url)
+            json = resp.json()
+            try:
+                return {x.get("username") for x in json.get("models")}
+            except TypeError or httpx.ConnectError:
+                return {}
+        return {}
 
     async def _get_model_id(self) -> Tuple[int, int]:
         url = f"https://{self.host}/api/front/v2/models/username/{self.model.replace(';', '-')}/cam"
