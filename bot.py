@@ -290,12 +290,12 @@ async def serv(
                 ) if final else None
                 if not isinstance(attachment, Path):
                     if final:
-                        if not isinstance(inter.channel, disnake.PartialMessageable):
+                        try:
                             await inter.author.send(
-                                f"{len(set(url_list))} Upload completed in {inter.channel.mention}",
+                                f"{len(set(url_list))} Upload completed in {inter.channel.mention}",  # type: ignore
                                 allowed_mentions=disnake.AllowedMentions(),
                             )
-                        else:
+                        finally:
                             await inter.channel.send(
                                 f"{inter.author.mention} {len(set(url_list))} Upload completed",
                                 allowed_mentions=disnake.AllowedMentions(),
