@@ -60,8 +60,6 @@ class Adownloader:
         }
 
         output_options = {
-            "c:v": "copy",
-            "c:a": "copy",
             "f": "mp4",
         }
 
