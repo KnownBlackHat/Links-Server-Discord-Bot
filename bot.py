@@ -294,7 +294,6 @@ async def serv(
                             await inter.author.send(
                                 f"{len(set(url_list))} Upload completed in {inter.channel.mention}",  # type: ignore
                                 allowed_mentions=disnake.AllowedMentions(),
-                                delete_after=10,
                             )
                         finally:
                             await inter.channel.send(
