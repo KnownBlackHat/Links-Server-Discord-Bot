@@ -10,6 +10,7 @@ from typing import Iterable, List, Optional, Set, Union
 from uuid import uuid4
 from zipfile import BadZipfile, ZipFile
 
+import aioshutil
 import disnake
 import httpx
 from disnake.ext import commands, tasks
@@ -89,6 +90,7 @@ def is_premium_user():
 
 
 def move_files_to_root(root_dir_path):
+    logger.debug(f"Moving files to {root_dir_path=}")
     root_dir = Path(root_dir_path)
 
     def move_files(directory):
@@ -125,7 +127,7 @@ async def upload_file(
         file.unlink()
 
 
-async def upload_zip(
+async def upload_zip_v1(
     inter: Union[disnake.Interaction, commands.Context],
     zip_files: Iterable[Path],
     max_file_size: float,
@@ -136,11 +138,33 @@ async def upload_zip(
         try:
             z = ZipFile(file)
             z.extractall(zip_path)
+            z.close()
             file.unlink()
             move_files_to_root(zip_path)
             await upload(inter, zip_path, max_file_size, channel)
         except BadZipfile:
+            logger.warning("Bad Zip File")
             file.unlink()
+            await aioshutil.rmtree(zip_path)
+
+
+async def upload_zip(
+    inter: Union[disnake.Interaction, commands.Context],
+    zip_files: Iterable[Path],
+    max_file_size: float,
+    channel: Optional[Union[disnake.TextChannel, disnake.ThreadWithMessage]] = None,
+) -> None:
+    zip_path = Path(str(uuid4()))
+    for file in zip_files:
+        try:
+            await aioshutil.unpack_archive(file, zip_path)
+            file.unlink()
+            move_files_to_root(zip_path)
+            await upload(inter, zip_path, max_file_size, channel)
+        except Exception as e:
+            logger.error(f"Bad Zip File {e}")
+            file.unlink()
+            await aioshutil.rmtree(zip_path)
 
 
 async def upload_segment(
@@ -206,9 +230,7 @@ async def upload(
             except Exception as e:
                 logger.error(f"Upload Failed {e} {sum(len_file)} {len_file=}")
 
-        for file in dir_iter:
-            file.unlink()
-        dir.rmdir()
+        await aioshutil.rmtree(dir)
 
 
 async def serv(
