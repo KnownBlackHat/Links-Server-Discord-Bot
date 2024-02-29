@@ -6,7 +6,7 @@ import time
 from asyncio.subprocess import Process
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Iterable, List, Optional, Set, Union
+from typing import Dict, Iterable, List, Optional, Set, Union
 from uuid import uuid4
 from zipfile import BadZipfile, ZipFile
 
@@ -205,6 +205,7 @@ async def upload(
         to_segment = {
             file for file in dir_iter if file.stat().st_size / 1024**2 > max_file_size
         }
+        dir_iter = dir_iter - zip_files
         dir_iter = sorted(dir_iter - to_segment)
         total_file = [file for file in map(lambda x: disnake.File(x), dir_iter)]
         file_grps = [total_file[i : i + 8] for i in range(0, len(total_file), 8)]
@@ -303,8 +304,8 @@ async def serv(
                         float((inter.guild.filesize_limit / 1024**2) - 1),
                         channel=channel,
                     )
-                except Exception as e:
-                    logger.error(f"Upload Failed {e}")
+                except Exception:
+                    logger.error("Upload Failed")
                     return
                 logger.info(f"Upload Sequence {idx}/{len(url_grp)} Completed")
                 logger.info(
@@ -463,7 +464,7 @@ async def slash_record(inter: disnake.GuildCommandInteraction, model: str):
 @slash_record.autocomplete("model")
 async def models_suggestions(
     inter: disnake.GuildCommandInteraction, name: str
-) -> Set | None:
+) -> Set | Dict:
     return await NsfwLiveCam(
         model_name="", out_dir=Path("."), client=httpx.AsyncClient()
     ).get_suggestions(name)
