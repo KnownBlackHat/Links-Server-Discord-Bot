@@ -47,13 +47,16 @@ class NsfwLiveCam:
         url = f"https://{self.stream_host}/hls/{id}/master/{id}.m3u8"
         input_options = {
             "filename": url,
+            "-reconnect": 4,
+            "-reconnect_at_eof": 4,
+            "-reconnect_streamed": 4,
+            "-reconnect_delay_max": 5,
         }
 
         output_options = {
             "c:v": "copy",
             "c:a": "copy",
             "f": "mp4",
-            "preset": "ultrafast",
             "bsf:a": "aac_adtstoasc",
         }
 
@@ -71,10 +74,11 @@ class NsfwLiveCam:
 if __name__ == "__main__":
 
     async def main():
-        recorder = NsfwLiveCam(
-            model_name=sys.argv[1], out_dir=Path("."), client=httpx.AsyncClient()
-        )
-        proc = await recorder.record_stream()
-        await proc.wait()
+        async with httpx.AsyncClient() as client:
+            recorder = NsfwLiveCam(
+                model_name=sys.argv[1], out_dir=Path("."), client=client
+            )
+            proc = await recorder.record_stream()
+            await proc.wait()
 
     asyncio.run(main())
