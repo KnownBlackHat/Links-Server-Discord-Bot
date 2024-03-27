@@ -47,10 +47,6 @@ class NsfwLiveCam:
         url = f"https://{self.stream_host}/hls/{id}/master/{id}.m3u8"
         input_options = {
             "filename": url,
-            "-reconnect": 4,
-            "-reconnect_at_eof": 4,
-            "-reconnect_streamed": 4,
-            "-reconnect_delay_max": 5,
         }
 
         output_options = {
